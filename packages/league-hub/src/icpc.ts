@@ -559,7 +559,7 @@ export function buildCdpZip(database: HubDatabase, scoreboard: ScoreboardSnapsho
   const api = {
     version: '2023-06',
     version_url: 'https://ccs-specs.icpc.io/2023-06/contest_api',
-    provider: { name: 'Hydro League Hub', version: '0.1.1' },
+    provider: { name: 'Hydro League Hub', version: '0.1.2' },
   };
   const contestYaml = Object.entries(resources.contests[0] ?? {})
     .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)

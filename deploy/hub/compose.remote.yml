@@ -1,7 +1,7 @@
 name: hydro-league-sync
 
 x-hub-common: &hub-common
-  image: ${HYDRO_LEAGUE_IMAGE:-hydro-league-hub:0.1.1}
+  image: ${HYDRO_LEAGUE_IMAGE:-hydro-league-hub:0.1.2}
   pull_policy: never
   init: true
   restart: unless-stopped

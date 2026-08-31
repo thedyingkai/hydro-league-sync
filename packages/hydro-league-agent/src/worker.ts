@@ -121,7 +121,7 @@ export class DeliveryWorker {
       pending_events: await this.outbox.pendingCount(),
       rejected_events: await this.outbox.rejectedCount(),
       ...(lastAcked !== undefined ? { last_acked_source_seq: lastAcked } : {}),
-      agent_version: '0.1.1',
+      agent_version: '0.1.2',
       hydro_version: this.hydroVersion,
     };
     try {

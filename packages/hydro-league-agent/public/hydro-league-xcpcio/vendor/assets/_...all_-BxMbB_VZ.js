@@ -1,0 +1,1 @@
+import{n as e,t}from"./route-block-D2JBSGtl.js";import{Et as n,Q as r,ct as i,gt as a,jt as o,q as s,tt as c}from"./index-DGIVwg0I.js";c(),a();var l=r({__name:`[...all]`,setup(t){let r=o().dataSource;return(t,a)=>{let o=e;return i(),s(o,{"data-source-url":n(r)},null,8,[`data-source-url`])}}});typeof t==`function`&&t(l);var u=l;export{u as default};

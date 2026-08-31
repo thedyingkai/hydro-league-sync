@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.2 - 2026-09-01
+
+- Allowed the self-hosted Agent wrapper to consume a deliberately configured,
+  same-origin historical `/scoreboard/xcpcio?json=true` data endpoint.
+- Changed object-form XCPCIO medal settings to retain only the explicitly
+  configured Gold, Silver, and Bronze tiers, keeping manual awards authoritative
+  instead of adding the upstream implicit Honorable tier.
+- Documented that the historical warmup contest uses an empty medal setting and
+  therefore has no awards; historical final-contest group awards remain manual.
+- Excluded local XCPCIO build dependencies and generated output from Agent
+  release packages while retaining the pinned fork source, patch, and license.
+
 ## 0.1.1 - 2026-09-01
 
 - Added persisted school badge URLs and XCPCIO team groups, including custom

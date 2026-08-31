@@ -21,7 +21,7 @@ function localDataSource() {
     return { source: `${source.pathname}#allInOne=true`, hub: true };
   }
 
-  const hydro = /^\/d\/[^/]+\/contest\/[a-f\d]{24}\/scoreboard\/(?:leagueboard|league-xcpcio)$/i;
+  const hydro = /^\/d\/[^/]+\/contest\/[a-f\d]{24}\/scoreboard\/(?:xcpcio|leagueboard|league-xcpcio)$/i;
   if (!hydro.test(source.pathname)
     || source.searchParams.get('json') !== 'true'
     || [...source.searchParams.keys()].some((key) => key !== 'json')) {
@@ -50,7 +50,7 @@ try {
   });
   if (!response.ok) throw new TypeError('XCPCIO board assets are not installed');
   const manifest = await response.json();
-  if (manifest.version !== '0.85.4-league-scoreboard-only.2' || Object.keys(manifest).some((key) => (
+  if (manifest.version !== '0.85.4-league-scoreboard-only.3' || Object.keys(manifest).some((key) => (
     key !== 'version' && key !== 'entry' && key !== 'stylesheet' && key !== 'sha256'
   ))) {
     throw new TypeError('XCPCIO asset manifest version is invalid');

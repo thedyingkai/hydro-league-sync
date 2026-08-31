@@ -1,4 +1,4 @@
-const XCPCIO_DATA_PATH = /^\/d\/[^/]+\/contest\/[a-f\d]{24}\/scoreboard\/(?:leagueboard|league-xcpcio)$/i;
+const XCPCIO_DATA_PATH = /^\/d\/[^/]+\/contest\/[a-f\d]{24}\/scoreboard\/(?:xcpcio|leagueboard|league-xcpcio)$/i;
 
 /** Builds a same-origin iframe URL without carrying any client-selected jury flag. */
 export function createXcpcioFrameUrl(dataUrl: string, origin: string): string {

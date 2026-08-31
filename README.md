@@ -74,8 +74,8 @@ Hub 启动后，使用管理员 Bearer 把完整 `hub-config.json` 全量 `PUT` 
 正式中心可直接加载 Release 中的离线 Docker 镜像归档，不需要在服务器重新构建：
 
 ```bash
-gzip -dc hydro-league-hub-0.1.1-linux-amd64.docker.tar.gz | docker load
-HYDRO_LEAGUE_IMAGE=hydro-league-hub:0.1.1 \
+gzip -dc hydro-league-hub-0.1.2-linux-amd64.docker.tar.gz | docker load
+HYDRO_LEAGUE_IMAGE=hydro-league-hub:0.1.2 \
   docker compose --env-file .env.hub -f deploy/hub/compose.remote.yml up -d
 ```
 
@@ -85,7 +85,7 @@ HYDRO_LEAGUE_IMAGE=hydro-league-hub:0.1.1 \
 
 每所学校需要三份公开 Release 文件和一份私密配置：
 
-1. `hydro-league-agent-0.1.1.tgz`。
+1. `hydro-league-agent-0.1.2.tgz`。
 2. `install-beta9.sh`。
 3. `SHA256SUMS.txt`。
 4. 赛事方单独生成的本校 `site-configs/<site-id>.json`。该文件含本校 HMAC 密钥，不得转发给其他学校。
@@ -94,9 +94,9 @@ HYDRO_LEAGUE_IMAGE=hydro-league-hub:0.1.1 \
 
 ```bash
 sudo -i
-sha256sum hydro-league-agent-0.1.1.tgz
+sha256sum hydro-league-agent-0.1.2.tgz
 bash ./install-beta9.sh \
-  /absolute/path/hydro-league-agent-0.1.1.tgz
+  /absolute/path/hydro-league-agent-0.1.2.tgz
 ```
 
 脚本会先核对 Release 包 SHA-256 和宿主机 `hydrooj@5.0.0-beta.9`，备份旧状态、使用包内锁定的纯 JavaScript 运行依赖、确认插件内没有第二套 Hydro 或 React、登记 Addon、重启 PM2 并检查本机健康页。安装过程不访问 npm registry。安装器不修改已有插件配置；首次安装在没有配置时保持禁用，升级时保留原配置。安装失败时脚本恢复原 Addon 注册和目录。非标准 Hydro 用户、非 root 安装或非 PM2 进程请按 [学校端插件说明](packages/hydro-league-agent/README.md) 手工完成同样步骤。

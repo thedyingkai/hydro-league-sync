@@ -7,12 +7,12 @@ const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url
 const namespace = path.join(packageDirectory, 'public', 'hydro-league-xcpcio');
 const vendor = path.join(namespace, 'vendor');
 const expected = {
-  version: '0.85.4-league-scoreboard-only.2',
-  entry: 'vendor/assets/index-CCpXRCnK.js',
+  version: '0.85.4-league-scoreboard-only.3',
+  entry: 'vendor/assets/index-DGIVwg0I.js',
   stylesheet: 'vendor/assets/index-BNXIDeGh.css',
-  sha256: '1090eb94a2b162b7cf1532bcca80a2f0afb118850dd3e1a8eb40234dab555138',
+  sha256: 'ff6ad38b44a2359477d1a9a2c4505e3b598d61be75c791507cb78207bd5b7ea8',
   files: 15,
-  bytes: 2_546_912,
+  bytes: 2_547_128,
 };
 const forbidden = /highcharts|highstock|highsoft|highcharts\.com|\bgsap\b|greensock/i;
 

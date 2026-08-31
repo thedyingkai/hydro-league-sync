@@ -13,7 +13,10 @@ optional `league_status` object, renders an in-board warning when one or more
 schools are delayed or offline, and exposes the AGPL corresponding-source link
 when the same-origin wrapper supplies one. The standings row adapter also keeps
 unofficial teams visible while displaying `*` for them and computing displayed
-places from official teams only. The rank table, scoring model, filtering,
+places from official teams only. For object-form custom medal maps, the fork
+also treats the configured Gold, Silver, and Bronze thresholds as exhaustive
+and removes XCPCIO Core's implicit unbounded Honorable tier; string presets
+such as `ccpc` retain their upstream behavior. The rank table, scoring model, filtering,
 replay controls, and responsive layout remain XCPCIO implementations.
 
 The reviewed build used:
@@ -23,15 +26,15 @@ npm install --legacy-peer-deps --ignore-scripts --include=optional --no-audit --
 npm run build
 ```
 
-It completed with Node 22.12.0, npm 10.9.0, Vite 8.2.2, 541 transformed
-modules, and a 9.55 second production build. The distributable assets are
+It completed with Node 22.12.0, npm 10.9.0, Vite 8.2.2, 542 transformed
+modules, and a 9.13 second production build. The distributable assets are
 self-hosted under `public/hydro-league-xcpcio/vendor`:
 
-- Entry: `assets/index-CCpXRCnK.js`
+- Entry: `assets/index-DGIVwg0I.js`
 - Stylesheet: `assets/index-BNXIDeGh.css`
 - Files: 15
-- Bytes: 2,546,912
-- Tree SHA-256: `1090eb94a2b162b7cf1532bcca80a2f0afb118850dd3e1a8eb40234dab555138`
+- Bytes: 2,547,128
+- Tree SHA-256: `ff6ad38b44a2359477d1a9a2c4505e3b598d61be75c791507cb78207bd5b7ea8`
 
 `tools/verify-xcpcio-assets.mjs` verifies the manifest, full asset-tree digest,
 local import closure, required notices, and the absence of Highcharts/GSAP

@@ -892,7 +892,7 @@ export function createHubApplication(input: HubOptions = {}): HubApplication {
   const apiInformation = {
     version: '2023-06',
     version_url: 'https://ccs-specs.icpc.io/2023-06/contest_api',
-    provider: { name: 'Hydro League Hub', version: '0.1.1' },
+    provider: { name: 'Hydro League Hub', version: '0.1.2' },
   };
   const accessInformation = {
     capabilities: [],

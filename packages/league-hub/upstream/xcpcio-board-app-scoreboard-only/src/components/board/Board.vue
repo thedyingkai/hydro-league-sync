@@ -4,6 +4,8 @@ import type { BoardData } from "@board/composables/useQueryBoardData";
 import type { Contest, Submissions, Teams } from "@xcpcio/core";
 import type { Contest as IContest, Submissions as ISubmissions, Teams as ITeams, Lang } from "@xcpcio/types";
 
+import { retainExplicitCustomMedalAwards } from "@board/composables/customMedalAwards";
+
 import { createContest, createSubmissions, createTeams, getImageSource, getTimeDiff, Rank, RankOptions } from "@xcpcio/core";
 import { ContestState } from "@xcpcio/types";
 
@@ -108,7 +110,9 @@ watch(data, async () => {
     return;
   }
 
-  contestData.value = createContest(data.value?.contest as IContest);
+  const contestInput = data.value?.contest as IContest;
+  contestData.value = createContest(contestInput);
+  retainExplicitCustomMedalAwards(contestInput.medal, contestData.value.awards);
   updateContestName();
 
   teamsData.value = createTeams(data.value?.teams as ITeams);

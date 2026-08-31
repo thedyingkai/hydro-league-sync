@@ -14,6 +14,8 @@
 *.yaml text eol=lf
 *.json text eol=lf
 *.md text eol=lf
+*.patch text eol=lf
+.npmignore text eol=lf
 *.xlsx binary
 *.zip binary
 *.tgz binary

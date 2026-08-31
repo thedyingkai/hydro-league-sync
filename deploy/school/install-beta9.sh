@@ -3,14 +3,14 @@ set -Eeuo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: sudo ./install-beta9.sh /absolute/path/hydro-league-agent-0.1.1.tgz
+Usage: sudo ./install-beta9.sh /absolute/path/hydro-league-agent-0.1.2.tgz
 
 Environment overrides:
   HYDRO_HOME          Hydro data directory (default: /root/.hydro)
   HYDRO_PM2_PROCESS   PM2 process name (default: hydrooj)
   HYDRO_HEALTH_URL    Local health URL (default: http://127.0.0.1:8888/)
   HYDRO_LEAGUE_AGENT_SHA256
-                      Expected package SHA-256 (defaults to the official 0.1.1 asset)
+                      Expected package SHA-256 (defaults to the official 0.1.2 asset)
 
 This installer targets the standard root-owned Hydro 5.0.0-beta.9 + PM2 layout.
 It does not change Hydro plugin configuration. Review the site configuration
@@ -31,7 +31,7 @@ archive=$(realpath -e -- "$1")
 hydro_home=${HYDRO_HOME:-/root/.hydro}
 pm2_process=${HYDRO_PM2_PROCESS:-hydrooj}
 health_url=${HYDRO_HEALTH_URL:-http://127.0.0.1:8888/}
-expected_sha256=${HYDRO_LEAGUE_AGENT_SHA256:-21383088944b1a20d4915d1f4c01048399912fe9d498c10a8dcc5c19f1066c60}
+expected_sha256=${HYDRO_LEAGUE_AGENT_SHA256:-c1b3b2b9acc11f2b86b73e411da4f540c696f196a5657c554fb810cf9a4611d2}
 
 case "$hydro_home" in
   /*) ;;
@@ -135,7 +135,7 @@ done
 
 node - "$staging/package.json" <<'NODE'
 const pkg = require(process.argv[2]);
-if (pkg.name !== 'hydro-league-agent' || pkg.version !== '0.1.1') {
+if (pkg.name !== 'hydro-league-agent' || pkg.version !== '0.1.2') {
   throw new Error(`Unexpected package: ${pkg.name}@${pkg.version}`);
 }
 if (pkg.peerDependencies?.hydrooj !== '5.0.0-beta.9') {
@@ -185,7 +185,7 @@ test "$healthy" = 1
 
 trap - ERR INT TERM HUP
 cat <<EOF
-Hydro League Agent 0.1.1 installed successfully.
+Hydro League Agent 0.1.2 installed successfully.
 Addon directory: $destination
 Backup directory: $backup
 The installer did not change the Hydro plugin configuration. Review it before use.

@@ -9,6 +9,16 @@ const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url
 const publicDirectory = path.join(packageDirectory, 'public');
 const contestId = '64f000000000000000000001';
 const dataPath = `/d/system/contest/${contestId}/scoreboard/league-xcpcio?json=true`;
+const teamDefinitions = [
+  ['FRESHMAN-1', 'Freshman One', ['official', 'freshman'], 8],
+  ['SENIOR-1', 'Senior One', ['official', 'senior'], 7],
+  ['STAR-1', 'Star One', ['unofficial', 'star'], 6],
+  ['FRESHMAN-2', 'Freshman Two', ['official', 'freshman'], 5],
+  ['SENIOR-2', 'Senior Two', ['official', 'senior'], 4],
+  ['FRESHMAN-3', 'Freshman Three', ['official', 'freshman'], 3],
+  ['STAR-2', 'Star Two', ['unofficial', 'star'], 2],
+  ['FRESHMAN-4', 'Freshman Four', ['official', 'freshman'], 1],
+];
 const board = {
   contest: {
     contest_name: 'League 2026',
@@ -16,30 +26,42 @@ const board = {
     end_time: Math.floor(Date.now() / 1_000) + 10_800,
     frozen_time: 3_600,
     penalty: 1_200,
-    problem_quantity: 1,
-    problem_id: ['A'],
-    group: { official: 'Official' },
+    problem_quantity: 8,
+    problem_id: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+    group: {
+      official: 'Official',
+      unofficial: 'Unofficial',
+      freshman: 'Freshman',
+      senior: 'Senior',
+      star: 'Star',
+    },
     organization: 'School',
     status_time_display: { correct: true, incorrect: true, pending: true },
-    medal: 'icpc',
+    medal: {
+      freshman: { gold: 1, silver: 1, bronze: 1 },
+      senior: { gold: 1, silver: 0, bronze: 0 },
+      star: { gold: 1, silver: 0, bronze: 0 },
+    },
     logo: { preset: 'ICPC' },
     options: { submission_timestamp_unit: 'millisecond' },
   },
-  teams: [{
-    team_id: 'TEAM-001',
-    name: 'Offline Smoke Team',
+  teams: teamDefinitions.map(([teamId, name, group]) => ({
+    team_id: teamId,
+    name,
     organization: 'School A',
     members: ['Alice'],
-    group: ['official'],
-  }],
-  submissions: [{
-    problem_id: 0,
-    team_id: 'TEAM-001',
-    timestamp: 60_000,
-    status: 'CORRECT',
-    language: 'cpp17',
-    submission_id: 'school-a/system/contest/rid',
-  }],
+    group,
+  })),
+  submissions: teamDefinitions.flatMap(([teamId, , , solved], teamIndex) => (
+    Array.from({ length: solved }, (_, problemId) => ({
+      problem_id: problemId,
+      team_id: teamId,
+      timestamp: (teamIndex + problemId + 1) * 60_000,
+      status: 'CORRECT',
+      language: 'cpp17',
+      submission_id: `school-a/system/contest/${teamId}-${problemId}`,
+    }))
+  )),
 };
 
 const contentTypes = new Map([
@@ -198,7 +220,11 @@ async function waitForDevToolsEndpoint(profile, chromeState, timeoutMilliseconds
   const deadline = Date.now() + timeoutMilliseconds;
   while (Date.now() < deadline) {
     if (chromeState.error) throw chromeState.error;
-    if (chromeState.child.exitCode !== null || chromeState.child.signalCode !== null) {
+    // Edge's Windows launcher may hand the browser process off and exit before
+    // DevToolsActivePort is written. CDP remains the authoritative readiness
+    // and lifecycle boundary in that case.
+    if (process.platform !== 'win32'
+      && (chromeState.child.exitCode !== null || chromeState.child.signalCode !== null)) {
       throw new Error(`Chromium exited before CDP was ready: ${chromeState.stderr.slice(-2_000)}`);
     }
     try {
@@ -395,14 +421,14 @@ try {
   const renderDeadline = Date.now() + 20_000;
   while (Date.now() < renderDeadline) {
     if (chromeState.error) throw chromeState.error;
-    if (childHasExited(chromeState.child)) {
+    if (process.platform !== 'win32' && childHasExited(chromeState.child)) {
       throw new Error(`Chromium exited while rendering: ${chromeState.stderr.slice(-2_000)}`);
     }
     const evaluation = await cdp.send('Runtime.evaluate', {
       expression: 'document.body?.innerText ?? ""',
       returnByValue: true,
     }, sessionId);
-    if (evaluation.result?.value?.includes('Offline Smoke Team')) {
+    if (evaluation.result?.value?.includes('Freshman One')) {
       rendered = true;
       break;
     }
@@ -415,6 +441,63 @@ try {
     await delay(50);
   }
   if (!requests.includes(dataPath)) throw new Error('XCPCIO board did not request the local Hydro JSON proxy');
+
+  const readMedalState = async () => {
+    const evaluation = await cdp.send('Runtime.evaluate', {
+      expression: `(() => ({
+        rows: document.querySelectorAll('table.standings tbody tr.h-10').length,
+        gold: document.querySelectorAll('table.standings tbody tr.h-10 > td.stnd.gold').length,
+        silver: document.querySelectorAll('table.standings tbody tr.h-10 > td.stnd.silver').length,
+        bronze: document.querySelectorAll('table.standings tbody tr.h-10 > td.stnd.bronze').length,
+        honorable: document.querySelectorAll('table.standings tbody tr.h-10 > td.stnd.honorable').length,
+      }))()`,
+      returnByValue: true,
+    }, sessionId);
+    return evaluation.result?.value;
+  };
+  const assertMedalState = (group, actual, expected) => {
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`Unexpected ${group} medal state: ${JSON.stringify(actual)}; expected ${JSON.stringify(expected)}`);
+    }
+  };
+  const switchGroup = async (label) => {
+    const click = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const item = [...document.querySelectorAll('.second-level-menu-item')]
+          .find((node) => node.textContent.trim() === ${JSON.stringify(label)});
+        if (!item) return false;
+        item.click();
+        return true;
+      })()`,
+      returnByValue: true,
+    }, sessionId);
+    if (click.result?.value !== true) throw new Error(`XCPCIO group menu item was not found: ${label}`);
+    const deadline = Date.now() + 5_000;
+    while (Date.now() < deadline) {
+      const active = await cdp.send('Runtime.evaluate', {
+        expression: `document.querySelector('.second-level-menu-item-current')?.textContent?.trim() ?? ''`,
+        returnByValue: true,
+      }, sessionId);
+      if (active.result?.value === label) return;
+      await delay(50);
+    }
+    throw new Error(`XCPCIO did not activate group: ${label}`);
+  };
+
+  const medalStates = {};
+  medalStates.all = await readMedalState();
+  assertMedalState('all', medalStates.all, { rows: 8, gold: 0, silver: 0, bronze: 0, honorable: 0 });
+  for (const [key, label, expected] of [
+    ['official', 'Official', { rows: 6, gold: 0, silver: 0, bronze: 0, honorable: 0 }],
+    ['freshman', 'Freshman', { rows: 4, gold: 1, silver: 1, bronze: 1, honorable: 0 }],
+    ['senior', 'Senior', { rows: 2, gold: 1, silver: 0, bronze: 0, honorable: 0 }],
+    ['star', 'Star', { rows: 2, gold: 1, silver: 0, bronze: 0, honorable: 0 }],
+  ]) {
+    await switchGroup(label);
+    medalStates[key] = await readMedalState();
+    assertMedalState(key, medalStates[key], expected);
+  }
+
   const external = [...new Set(networkUrls.filter(isExternalHttpRequest))];
   if (external.length) throw new Error(`XCPCIO browser attempted external requests: ${external.join(', ')}`);
   if (browserErrors.length) throw new Error(`XCPCIO browser errors: ${browserErrors.join(' | ')}`);
@@ -425,6 +508,7 @@ try {
     observedBrowserRequests: networkUrls.length,
     externalRequests: 0,
     browserErrors: 0,
+    medalStates,
   })}\n`);
 } finally {
   for (const removeListener of removeNetworkListeners) removeListener();

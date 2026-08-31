@@ -52,6 +52,12 @@ school site.
 - `league-xcpcio`: compatibility alias for the same XCPCIO standings view.
   Its browser frame and assets are served locally.
 
+The wrapper also accepts an explicitly configured, same-origin historical
+`/scoreboard/xcpcio?json=true` data endpoint. Object-form medal settings render
+only the manually configured Gold, Silver, and Bronze tiers; they do not add an
+implicit Honorable tier. Historical warmup contests can set an empty medal
+object to show no awards.
+
 All views fetch through the local Hydro server and use distinct public/jury
 caches. Contestant browsers never contact the hub directly. The public/jury
 choice is made from the authenticated Hydro session; a browser-supplied

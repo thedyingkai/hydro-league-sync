@@ -1,6 +1,6 @@
 {
   "name": "@hydro-league-sync/league-hub",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Central ingestion, scoreboard, and ICPC Contest API service for Hydro League Sync.",
   "license": "AGPL-3.0-only",

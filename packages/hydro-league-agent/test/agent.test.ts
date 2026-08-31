@@ -590,7 +590,7 @@ describe('hub response boundaries', () => {
         last_acked_source_seq: 17,
         hub_high_watermark: 17,
         watermark_consistent: true,
-        agent_version: '0.1.1',
+        agent_version: '0.1.2',
         hydro_version: '5.0.0-beta.9',
       }],
       problems: [{ problem_id: 'problem-a', label: 'A', name: 'Problem A', ordinal: 0, color: null, rgb: null }],
@@ -775,11 +775,12 @@ describe('hub response boundaries', () => {
 });
 
 describe('XCPCIO self-hosted wrapper', () => {
-  it('only accepts the same-origin leagueboard aliases and never carries a view flag', () => {
+  it('only accepts the same-origin XCPCIO scoreboard views and never carries a view flag', () => {
     const origin = 'https://school.example';
+    const history = `/d/system/contest/${CONTEST_ID}/scoreboard/xcpcio?json=true`;
     const primary = `/d/system/contest/${CONTEST_ID}/scoreboard/leagueboard?json=true`;
     const alias = `/d/system/contest/${CONTEST_ID}/scoreboard/league-xcpcio?json=true`;
-    for (const local of [primary, alias]) {
+    for (const local of [history, primary, alias]) {
       const frame = createXcpcioFrameUrl(local, origin);
       expect(frame).toMatch(/^\/hydro-league-xcpcio\/index\.html\?source=/);
       expect(decodeURIComponent(frame)).not.toContain('view=');

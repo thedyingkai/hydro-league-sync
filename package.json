@@ -1,6 +1,6 @@
 {
   "name": "hydro-league-sync",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Reliable multi-site Hydro contest synchronization and unified ACM/ICPC scoreboard.",
   "license": "AGPL-3.0-only",
