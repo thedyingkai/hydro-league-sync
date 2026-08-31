@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
 export const REQUIRED_SHEETS = ['联赛配置', '学校信息', '队伍账号映射', '题目映射'];
+export const OPTIONAL_SHEETS = ['奖牌设置', '人工奖项'];
 
 export const CONFIG_HEADERS = [
   '联赛ID*', '联赛名称*', '赛制*', '罚时(分钟)*', 'CE罚时*', '开始时间*', '比赛时长(分钟)*',
@@ -22,6 +23,11 @@ export const PROBLEM_HEADERS = [
   '全局题目ID*', '题号标签*', '题目顺序*', '题目名称*', '学校ID*', '本地域ID', '本地比赛ID',
   '本地Hydro PID*', '题目包SHA256*', 'Checker SHA256*', '时限(ms)*', '内存(MB)*', '校验结果',
 ];
+
+export const SCHOOL_BADGE_HEADER = '校徽URL';
+export const TEAM_GROUPS_HEADER = '奖牌分组';
+export const MEDAL_HEADERS = ['分组', '金牌数', '银牌数', '铜牌数'];
+export const AWARD_HEADERS = ['奖项ID', '奖项名称', '全局队伍ID列表'];
 
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:@-]*$/;
 const OBJECT_ID_PATTERN = /^[a-f0-9]{24}$/i;
@@ -49,13 +55,17 @@ export class WorkbookValidationError extends Error {
   }
 }
 
-function text(value) {
+function rawText(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'object' && !Array.isArray(value)) {
-    if ('text' in value) return String(value.text).trim();
-    if ('result' in value) return text(value.result);
+    if ('text' in value) return String(value.text);
+    if ('result' in value) return rawText(value.result);
   }
-  return String(value).trim();
+  return String(value);
+}
+
+function text(value) {
+  return rawText(value).trim();
 }
 
 function integer(value, location, issues, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
@@ -65,6 +75,14 @@ function integer(value, location, issues, { min = 0, max = Number.MAX_SAFE_INTEG
     return null;
   }
   return raw;
+}
+
+function requiredInteger(value, location, issues, range = {}) {
+  if (text(value) === '') {
+    issues.push(`${location} 不能为空`);
+    return null;
+  }
+  return integer(value, location, issues, range);
 }
 
 function required(value, location, issues) {
@@ -77,6 +95,98 @@ function validateId(value, location, issues) {
   const result = required(value, location, issues);
   if (result && !ID_PATTERN.test(result)) {
     issues.push(`${location} 只能包含字母、数字、点、下划线、冒号、@ 和短横线，且必须以字母或数字开头`);
+  }
+  return result;
+}
+
+function repeatedlyDecode(value) {
+  let decoded = value;
+  for (let pass = 0; pass < 16; pass += 1) {
+    let invalidUtf8 = false;
+    const next = decoded.replace(/(?:%[0-9a-f]{2})+/giu, (sequence) => {
+      try {
+        return decodeURIComponent(sequence);
+      } catch {
+        invalidUtf8 = true;
+        return '';
+      }
+    });
+    if (invalidUtf8) return null;
+    if (next === decoded) return decoded;
+    decoded = next;
+  }
+  return null;
+}
+
+function safeUrlPath(value) {
+  const decoded = repeatedlyDecode(value);
+  if (decoded === null || /[\p{Cc}\\]/u.test(decoded) || decoded.includes('//')) return false;
+  return !decoded.split('/').some((segment) => segment === '..');
+}
+
+function badgeUrlKind(value) {
+  const decoded = repeatedlyDecode(value);
+  if (value.length < 1 || value.length > 2_048 || decoded === null || /[\p{Cc}\\]/u.test(decoded)) {
+    return null;
+  }
+  if (value.startsWith('/')) {
+    if (value.startsWith('//')) return null;
+    return safeUrlPath(value.split(/[?#]/u, 1)[0]) ? 'root-relative' : null;
+  }
+  const match = value.match(/^https?:\/\/([^/?#]+)(\/[^?#]*)?(?:[?#].*)?$/iu);
+  if (!match || match[1].includes('@') || !safeUrlPath(match[2] ?? '/')) return null;
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) return null;
+  return 'absolute-http';
+}
+
+function safeBadgeRootPath(value) {
+  if (badgeUrlKind(value) !== 'root-relative') return false;
+  const parsed = new URL(value, 'https://hydro-league.invalid');
+  return parsed.origin === 'https://hydro-league.invalid'
+    && parsed.pathname.startsWith('/hydro-league-xcpcio/');
+}
+
+function optionalBadgeUrl(value, location, issues) {
+  const raw = rawText(value);
+  const result = raw.trim();
+  const unsafeRaw = /[\p{Cc}\\]/u.test(raw);
+  if (!result && !unsafeRaw) return undefined;
+  const kind = unsafeRaw ? null : badgeUrlKind(result);
+  const valid = kind === 'absolute-http' || (kind === 'root-relative' && safeBadgeRootPath(result));
+  if (!valid) {
+    issues.push(`${location} 必须是无账号密码的完整 HTTP(S) URL，或 /hydro-league-xcpcio/ 下不含 //、控制字符、反斜杠和 .. 的根相对路径`);
+  }
+  return result;
+}
+
+function commaSeparated(value, location, issues) {
+  const raw = text(value);
+  if (!raw) return [];
+  const parts = raw.split(/[,，]/).map((item) => item.trim());
+  if (parts.some((item) => !item)) issues.push(`${location} 不能包含空项`);
+  const result = parts.filter(Boolean);
+  if (new Set(result).size !== result.length) issues.push(`${location} 不能包含重复项`);
+  return result;
+}
+
+function validateGroup(value, location, issues) {
+  const result = required(value, location, issues);
+  if (result.length > 128 || /[\u0000-\u001f\u007f,，]/u.test(result)) {
+    issues.push(`${location} 最多128个字符，且不能包含控制字符或逗号`);
+  }
+  return result;
+}
+
+function validateAwardId(value, location, issues) {
+  const result = required(value, location, issues);
+  if (result && (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,35}$/.test(result) || result.endsWith('.'))) {
+    issues.push(`${location} 必须是最长36位的 Contest API ID，只能包含字母、数字、点、下划线和短横线`);
   }
   return result;
 }
@@ -97,6 +207,17 @@ function assertHeaders(rows, sheet, expected, issues) {
       issues.push(`${sheet}!${columnName(index + 1)}3 表头应为“${header}”`);
     }
   });
+}
+
+function assertOptionalHeader(rows, sheet, index, expected, issues) {
+  const actual = text(rows[2]?.[index]);
+  const hasValues = dataRows(rows).some(({ row }) => text(row[index]) !== '');
+  if (!actual && !hasValues) return false;
+  if (actual !== expected) {
+    issues.push(`${sheet}!${columnName(index + 1)}3 表头应为“${expected}”`);
+    return false;
+  }
+  return true;
 }
 
 function columnName(index) {
@@ -187,6 +308,16 @@ export function convertWorkbookRows(sheets, options = {}) {
   assertHeaders(sheets['学校信息'], '学校信息', SCHOOL_HEADERS, issues);
   assertHeaders(sheets['队伍账号映射'], '队伍账号映射', TEAM_HEADERS, issues);
   assertHeaders(sheets['题目映射'], '题目映射', PROBLEM_HEADERS, issues);
+  const hasSchoolBadgeColumn = assertOptionalHeader(
+    sheets['学校信息'], '学校信息', SCHOOL_HEADERS.length, SCHOOL_BADGE_HEADER, issues,
+  );
+  const hasTeamGroupsColumn = assertOptionalHeader(
+    sheets['队伍账号映射'], '队伍账号映射', TEAM_HEADERS.length, TEAM_GROUPS_HEADER, issues,
+  );
+  const hasMedalSheet = Array.isArray(sheets['奖牌设置']);
+  const hasAwardSheet = Array.isArray(sheets['人工奖项']);
+  if (hasMedalSheet) assertHeaders(sheets['奖牌设置'], '奖牌设置', MEDAL_HEADERS, issues);
+  if (hasAwardSheet) assertHeaders(sheets['人工奖项'], '人工奖项', AWARD_HEADERS, issues);
 
   const configEntries = dataRows(sheets['联赛配置']);
   if (configEntries.length !== 1) issues.push('联赛配置必须且只能填写一行');
@@ -228,7 +359,12 @@ export function convertWorkbookRows(sheets, options = {}) {
     if (networkStatus && !['未联调', '联调通过', '联调异常'].includes(networkStatus)) {
       issues.push(`${prefix} 网络联调状态不是允许值`);
     }
-    return { schoolId, fullName, shortName, siteId, hydroUrl, domainId, contestId, hydroVersion, networkStatus };
+    const badgeUrl = hasSchoolBadgeColumn
+      ? optionalBadgeUrl(row[SCHOOL_HEADERS.length], `${prefix} 校徽URL`, issues)
+      : undefined;
+    return {
+      schoolId, fullName, shortName, siteId, hydroUrl, domainId, contestId, hydroVersion, networkStatus, badgeUrl,
+    };
   });
   if (!schools.length) issues.push('学校信息至少需要一所学校');
   assertUnique(schools, (item) => item.schoolId, '学校ID', issues);
@@ -248,11 +384,64 @@ export function convertWorkbookRows(sheets, options = {}) {
     const enabledText = required(row[17], `${prefix} 启用状态`, issues);
     if (enabledText && !['启用', '停用'].includes(enabledText)) issues.push(`${prefix} 启用状态必须为“启用”或“停用”`);
     if (!schoolById.has(schoolId)) issues.push(`${prefix} 引用了不存在的学校ID ${schoolId}`);
-    return { teamId, schoolId, name, kind, uid, enabled: enabledText === '启用' };
+    const groups = hasTeamGroupsColumn
+      ? commaSeparated(row[TEAM_HEADERS.length], `${prefix} 奖牌分组`, issues)
+        .map((group, index) => validateGroup(group, `${prefix} 奖牌分组第${index + 1}项`, issues))
+      : [];
+    if (groups.length > 20) issues.push(`${prefix} 奖牌分组最多填写20项`);
+    if (groups.some((group) => group === 'official' || group === 'unofficial')) {
+      issues.push(`${prefix} 奖牌分组不能填写保留组 official 或 unofficial`);
+    }
+    return { teamId, schoolId, name, kind, uid, enabled: enabledText === '启用', groups };
   });
   assertUnique(teamRows, (item) => item.teamId, '全局队伍ID', issues);
   const activeTeams = teamRows.filter((team) => team.enabled);
   assertUnique(activeTeams, (item) => `${item.schoolId}\0${item.uid}`, '启用队伍的学校+Hydro UID', issues);
+
+  const medals = hasMedalSheet
+    ? dataRows(sheets['奖牌设置']).map(({ row, rowNumber }) => {
+      const prefix = `奖牌设置!第${rowNumber}行`;
+      return {
+        group: validateGroup(row[0], `${prefix} 分组`, issues),
+        gold: requiredInteger(row[1], `${prefix} 金牌数`, issues),
+        silver: requiredInteger(row[2], `${prefix} 银牌数`, issues),
+        bronze: requiredInteger(row[3], `${prefix} 铜牌数`, issues),
+      };
+    })
+    : [];
+  assertUnique(medals, (item) => item.group, '奖牌设置分组', issues);
+  const availableMedalGroups = new Set([
+    'official',
+    'unofficial',
+    ...activeTeams.flatMap((team) => team.groups),
+  ]);
+  for (const medal of medals) {
+    if (medal.group && !availableMedalGroups.has(medal.group)) {
+      issues.push(`奖牌设置分组 ${medal.group} 未被任何启用队伍使用`);
+    }
+  }
+
+  const awards = hasAwardSheet
+    ? dataRows(sheets['人工奖项']).map(({ row, rowNumber }) => {
+      const prefix = `人工奖项!第${rowNumber}行`;
+      const teamIds = commaSeparated(row[2], `${prefix} 全局队伍ID列表`, issues)
+        .map((teamId, index) => validateId(teamId, `${prefix} 全局队伍ID列表第${index + 1}项`, issues));
+      return {
+        award_id: validateAwardId(row[0], `${prefix} 奖项ID`, issues),
+        citation: required(row[1], `${prefix} 奖项名称`, issues),
+        team_ids: teamIds,
+      };
+    })
+    : [];
+  assertUnique(awards, (item) => item.award_id, '人工奖项ID', issues);
+  const activeTeamIds = new Set(activeTeams.map((team) => team.teamId));
+  for (const award of awards) {
+    for (const teamId of award.team_ids) {
+      if (teamId && !activeTeamIds.has(teamId)) {
+        issues.push(`人工奖项 ${award.award_id} 引用了不存在或未启用的队伍 ${teamId}`);
+      }
+    }
+  }
 
   const problemRows = dataRows(sheets['题目映射']).map(({ row, rowNumber }) => {
     const prefix = `题目映射!第${rowNumber}行`;
@@ -345,6 +534,13 @@ export function convertWorkbookRows(sheets, options = {}) {
       freeze_time: freezeAt.toISOString(),
       unfreeze_at: null,
       penalty_minutes: penaltyMinutes,
+      ...(medals.length ? {
+        xcpcio_medals: Object.fromEntries(medals.map((medal) => [medal.group, {
+          gold: medal.gold,
+          silver: medal.silver,
+          bronze: medal.bronze,
+        }])),
+      } : {}),
     },
     sites: schools.map((school) => ({
       site_id: school.siteId,
@@ -362,6 +558,8 @@ export function convertWorkbookRows(sheets, options = {}) {
         school_name: school.fullName,
         official: team.kind === '正式',
         hidden: false,
+        ...(team.groups.length ? { groups: team.groups } : {}),
+        ...(school.badgeUrl ? { badge_url: school.badgeUrl } : {}),
       };
     }),
     problems,
@@ -387,6 +585,7 @@ export function convertWorkbookRows(sheets, options = {}) {
         problem_id: problem.problemId,
       };
     }),
+    ...(awards.length ? { awards } : {}),
   };
 
   const siteConfigs = Object.fromEntries(schools.map((school) => {

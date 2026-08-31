@@ -49,6 +49,66 @@ describe('XCPCIO all-in-one conversion', () => {
     ]);
   });
 
+  it('preserves a safe root-relative team badge for same-origin serving', () => {
+    const badgeUrl = '/hydro-league-xcpcio/school-badges/besti.png';
+    const json = toXcpcioAllInOne({
+      config: leagueConfig(),
+      teams: [{ ...teams[0]!, badge_url: badgeUrl }],
+      problems,
+      events,
+      view: 'jury',
+      now: atMinute(301),
+    });
+    expect(json.teams[0]?.badge).toEqual({ url: badgeUrl });
+    expect(() => XcpcioAllInOneSchema.parse({
+      ...json,
+      teams: [{ ...json.teams[0]!, badge: { url: '/badges/../private.png' } }],
+    })).toThrow();
+  });
+
+  it('prefers configured per-group medal counts over the XCPCIO preset', () => {
+    const medal = {
+      official: { gold: 9, silver: 18, bronze: 27 },
+      '2025DKYCPC\u6253\u661f': { gold: 2, silver: 0, bronze: 0 },
+    };
+    const json = toXcpcioAllInOne({
+      config: leagueConfig({ xcpcio_preset: 'CCPC', xcpcio_medals: medal }),
+      teams: [teams[0]!],
+      problems,
+      events,
+      view: 'jury',
+      now: atMinute(301),
+    });
+    expect(json.contest.logo.preset).toBe('CCPC');
+    expect(json.contest.medal).toEqual(medal);
+  });
+
+  it('preserves readable non-ASCII team group names', () => {
+    const group = '2025DKYCPC新生';
+    const json = toXcpcioAllInOne({
+      config: leagueConfig({ xcpcio_medals: { [group]: { gold: 6, silver: 12, bronze: 18 } } }),
+      teams: [{ ...teams[0]!, groups: [group] }],
+      problems,
+      events,
+      view: 'jury',
+      now: atMinute(301),
+    });
+    expect(json.contest.group[group]).toBe(group);
+    expect(json.teams[0]?.group).toEqual(['official', group]);
+  });
+
+  it('keeps the preset medal mode when no group medal map is configured', () => {
+    const json = toXcpcioAllInOne({
+      config: leagueConfig({ xcpcio_preset: 'CCPC' }),
+      teams: [teams[0]!],
+      problems,
+      events,
+      view: 'jury',
+      now: atMinute(301),
+    });
+    expect(json.contest.medal).toBe('ccpc');
+  });
+
   it('accepts the strict optional multi-school connection status extension', () => {
     const json = toXcpcioAllInOne({
       config: leagueConfig(),

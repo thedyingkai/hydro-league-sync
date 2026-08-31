@@ -57,6 +57,7 @@ interface MutableConfiguration {
   problems: Array<Record<string, unknown>>;
   team_mappings: Array<Record<string, unknown>>;
   problem_mappings: Array<Record<string, unknown>>;
+  awards?: Array<Record<string, unknown>>;
 }
 
 function mutableConfiguration(): MutableConfiguration {
@@ -153,6 +154,36 @@ test('admin configuration rejects coercions and non-interior freeze boundaries',
     { name: 'freeze at start', mutate: (body) => { body.contest.freeze_time = body.contest.start_time; }, message: /strictly after/ },
     { name: 'freeze at end', mutate: (body) => { body.contest.freeze_time = body.contest.end_time; }, message: /strictly after/ },
     { name: 'non-hex rgb', mutate: (body) => { body.problems[0]!.rgb = 'red'; }, message: /hexadecimal color/ },
+    { name: 'team groups object', mutate: (body) => { body.teams[0]!.groups = {}; }, message: /must be an array/ },
+    { name: 'reserved team group', mutate: (body) => { body.teams[0]!.groups = ['official']; }, message: /reserved official or unofficial/ },
+    { name: 'badge with credentials', mutate: (body) => { body.teams[0]!.badge_url = 'https://user:pass@example.test/logo.png'; }, message: /without credentials/ },
+    { name: 'protocol-relative badge', mutate: (body) => { body.teams[0]!.badge_url = '//example.test/logo.png'; }, message: /safe root-relative path/ },
+    { name: 'traversing root-relative badge', mutate: (body) => { body.teams[0]!.badge_url = '/hydro-league-xcpcio/%2e%2e/private.png'; }, message: /safe root-relative path/ },
+    { name: 'double-encoded traversing badge', mutate: (body) => { body.teams[0]!.badge_url = '/hydro-league-xcpcio/%252e%252e/private.png'; }, message: /safe root-relative path/ },
+    { name: 'backslash root-relative badge', mutate: (body) => { body.teams[0]!.badge_url = '/hydro-league-xcpcio/%5cprivate.png'; }, message: /safe root-relative path/ },
+    { name: 'double-encoded backslash badge', mutate: (body) => { body.teams[0]!.badge_url = '/hydro-league-xcpcio/%255cprivate.png'; }, message: /safe root-relative path/ },
+    { name: 'encoded protocol-relative badge', mutate: (body) => { body.teams[0]!.badge_url = '/%252fexample.test/logo.png'; }, message: /safe root-relative path/ },
+    { name: 'double-encoded control character badge', mutate: (body) => { body.teams[0]!.badge_url = '/hydro-league-xcpcio/%2500.png'; }, message: /safe root-relative path/ },
+    { name: 'UTF-8 encoded control character badge', mutate: (body) => { body.teams[0]!.badge_url = '/hydro-league-xcpcio/%C2%85.png'; }, message: /safe root-relative path/ },
+    { name: 'truncated UTF-8 badge', mutate: (body) => { body.teams[0]!.badge_url = '/hydro-league-xcpcio/%E5%8C.png'; }, message: /safe root-relative path/ },
+    { name: 'invalid UTF-8 badge', mutate: (body) => { body.teams[0]!.badge_url = '/hydro-league-xcpcio/%FF.png'; }, message: /safe root-relative path/ },
+    { name: 'fractional medal count', mutate: (body) => {
+      body.teams[0]!.groups = ['freshman'];
+      body.contest.xcpcio_medals = { freshman: { gold: 1.5, silver: 0, bronze: 0 } };
+    }, message: /non-negative integer/ },
+    { name: 'unknown medal group', mutate: (body) => {
+      body.contest.xcpcio_medals = { missing: { gold: 1, silver: 0, bronze: 0 } };
+    }, message: /unknown group/ },
+    { name: 'award references hidden team', mutate: (body) => {
+      body.teams[1]!.hidden = true;
+      body.awards = [{ award_id: 'winner', citation: 'Winner', team_ids: ['team-b'] }];
+    }, message: /unknown or hidden team/ },
+    { name: 'duplicate award id', mutate: (body) => {
+      body.awards = [
+        { award_id: 'winner', citation: 'Winner', team_ids: ['team-a'] },
+        { award_id: 'winner', citation: 'Another winner', team_ids: ['team-b'] },
+      ];
+    }, message: /award_id values must be unique/ },
   ];
   for (const item of cases) {
     const body = mutableConfiguration();
@@ -166,6 +197,20 @@ test('admin configuration rejects coercions and non-interior freeze boundaries',
     assert.equal(response.statusCode, 400, `${item.name}: ${response.body}`);
     assert.match(response.json().message, item.message, item.name);
   }
+
+  const rootRelative = configuration();
+  rootRelative.teams[0]!.badge_url = '/hydro-league-xcpcio/school-badges/%E5%8C%97%E5%AD%97%F0%9F%8F%AB.png';
+  const rootRelativeResponse = await hub.app.inject({
+    method: 'PUT',
+    url: '/api/v1/admin/config',
+    headers: { authorization: `Bearer ${adminToken}` },
+    payload: rootRelative,
+  });
+  assert.equal(rootRelativeResponse.statusCode, 200, rootRelativeResponse.body);
+  assert.equal(
+    hub.database.getTeams()[0]?.badge_url,
+    '/hydro-league-xcpcio/school-badges/%E5%8C%97%E5%AD%97%F0%9F%8F%AB.png',
+  );
 
   await configure(hub);
   const replacement = configuration();

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import {
   ContestIdImmutableError,
@@ -89,6 +90,120 @@ test('WAL ingestion commits use FULL durability and tolerate short writer conten
   assert.equal(journal.journal_mode, 'wal');
   assert.equal(synchronous.synchronous, 2, 'SQLite FULL is numeric level 2');
   assert.equal(busyTimeout.timeout, 5_000);
+});
+
+test('configuration round-trips XCPCIO team metadata, medal groups, and manual awards', () => {
+  const database = new HubDatabase(':memory:');
+  try {
+    const config = configuration();
+    config.contest.xcpcio_medals = {
+      official: { gold: 9, silver: 18, bronze: 27 },
+      unofficial: { gold: 2, silver: 0, bronze: 0 },
+    };
+    config.teams[0]!.groups = ['official', 'freshman'];
+    config.teams[0]!.badge_url = 'https://scoreboard.example/assets/school-a.png';
+    config.awards = [
+      { award_id: 'winner', citation: 'Champion', team_ids: ['team-1'] },
+      { award_id: 'first-to-solve-a', citation: 'First to solve problem A', team_ids: ['team-2'] },
+    ];
+
+    database.importConfiguration(config, configuredAt);
+
+    assert.deepEqual(database.getContest()?.xcpcio_medals, config.contest.xcpcio_medals);
+    assert.deepEqual(database.getTeams(), [
+      {
+        team_id: 'team-1',
+        name: 'Team 1',
+        school_id: siteId,
+        official: true,
+        hidden: false,
+        groups: ['official', 'freshman'],
+        badge_url: 'https://scoreboard.example/assets/school-a.png',
+      },
+      {
+        team_id: 'team-2',
+        name: 'Team 2',
+        school_id: siteId,
+        official: true,
+        hidden: false,
+        groups: [],
+      },
+    ]);
+    assert.deepEqual(database.getAwards(), config.awards);
+    const exported = database.exportConfiguration();
+    assert.deepEqual(exported?.contest.xcpcio_medals, config.contest.xcpcio_medals);
+    assert.deepEqual(exported?.teams, database.getTeams());
+    assert.deepEqual(exported?.awards, config.awards);
+
+    const defaults = configuration();
+    database.importConfiguration(defaults, '2026-08-30T01:01:00.000Z');
+    assert.equal(database.getContest()?.xcpcio_medals, undefined);
+    assert.deepEqual(database.getTeams().map((team) => team.groups), [[], []]);
+    assert.deepEqual(database.getAwards(), []);
+  } finally {
+    database.close();
+  }
+});
+
+test('legacy contest and team tables migrate in place with compatible metadata defaults', (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'hydro-league-legacy-db-'));
+  const path = join(directory, 'hub.sqlite');
+  const legacy = new DatabaseSync(path);
+  legacy.exec(`
+    CREATE TABLE contest_config (
+      singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+      contest_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      freeze_time TEXT,
+      unfreeze_at TEXT,
+      penalty_minutes INTEGER NOT NULL DEFAULT 20,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE teams (
+      team_id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      school_id TEXT NOT NULL,
+      school_name TEXT,
+      official INTEGER NOT NULL DEFAULT 1,
+      hidden INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO contest_config
+      (singleton, contest_id, name, start_time, end_time, penalty_minutes, updated_at)
+    VALUES
+      (1, 'legacy-league', 'Legacy League', '2025-01-01T00:00:00.000Z',
+        '2025-01-01T05:00:00.000Z', 20, '2024-12-01T00:00:00.000Z');
+    INSERT INTO teams
+      (team_id, name, school_id, official, hidden, updated_at)
+    VALUES
+      ('legacy-team', 'Legacy Team', 'legacy-school', 1, 0, '2024-12-01T00:00:00.000Z');
+  `);
+  legacy.close();
+
+  const database = new HubDatabase(path);
+  t.after(() => {
+    database.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  const contestColumns = database.db.prepare('PRAGMA table_info(contest_config)').all() as Array<Record<string, unknown>>;
+  const teamColumns = database.db.prepare('PRAGMA table_info(teams)').all() as Array<Record<string, unknown>>;
+  assert.ok(contestColumns.some((column) => column.name === 'xcpcio_medals_json'));
+  assert.ok(contestColumns.some((column) => column.name === 'awards_json'));
+  assert.ok(teamColumns.some((column) => column.name === 'groups_json'));
+  assert.ok(teamColumns.some((column) => column.name === 'badge_url'));
+  assert.equal(database.getContest()?.xcpcio_medals, undefined);
+  assert.deepEqual(database.getAwards(), []);
+  assert.deepEqual(database.getTeams(), [{
+    team_id: 'legacy-team',
+    name: 'Legacy Team',
+    school_id: 'legacy-school',
+    official: true,
+    hidden: false,
+    groups: [],
+  }]);
 });
 
 test('contest identity is immutable and a rejected replacement leaves all existing state intact', () => {

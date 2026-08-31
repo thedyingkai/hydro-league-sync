@@ -8,6 +8,62 @@ const NONCE_PATTERN = /^[A-Za-z0-9_-]{16,128}$/;
 
 /** IDs are opaque, case-sensitive values. Slash and control characters are excluded. */
 export const OpaqueIdSchema = z.string().min(1).max(128).regex(ID_PATTERN);
+export const GroupNameSchema = z.string().trim().min(1).max(128)
+  .regex(/^[^\u0000-\u001f\u007f]+$/u);
+
+const BADGE_URL_FORBIDDEN_CHARACTERS = /[\p{Cc}\\]/u;
+
+function repeatedlyDecode(value: string): string | undefined {
+  let decoded = value;
+  for (let pass = 0; pass < 16; pass += 1) {
+    let invalidUtf8 = false;
+    const next = decoded.replace(/(?:%[0-9a-f]{2})+/giu, (sequence: string) => {
+      try {
+        return decodeURIComponent(sequence);
+      } catch {
+        invalidUtf8 = true;
+        return '';
+      }
+    });
+    if (invalidUtf8) return undefined;
+    if (next === decoded) return decoded;
+    decoded = next;
+  }
+  return undefined;
+}
+
+function decodedPathIsSafe(path: string): boolean {
+  const decoded = repeatedlyDecode(path);
+  if (decoded === undefined) return false;
+  if (BADGE_URL_FORBIDDEN_CHARACTERS.test(decoded) || decoded.includes('//')) return false;
+  return !decoded.split('/').some((segment) => segment === '..');
+}
+
+export function isSafeBadgeUrl(value: string): boolean {
+  const decoded = repeatedlyDecode(value);
+  if (value.length < 1 || value.length > 2_048 || decoded === undefined
+    || BADGE_URL_FORBIDDEN_CHARACTERS.test(decoded)) return false;
+  if (value.startsWith('/')) {
+    if (value.startsWith('//')) return false;
+    return decodedPathIsSafe(value.split(/[?#]/u, 1)[0]!);
+  }
+
+  const match = value.match(/^https?:\/\/([^/?#]+)(\/[^?#]*)?(?:[?#].*)?$/iu);
+  if (!match || match[1]!.includes('@')) return false;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) return false;
+  return decodedPathIsSafe(match[2] ?? '/');
+}
+
+export const BadgeUrlSchema = z.string().refine(isSafeBadgeUrl, {
+  message: 'Badge URL must be credential-free HTTP(S) or a safe root-relative path',
+});
+
 export const SourceSeqSchema = z.number().int().safe().positive();
 export const HydroUidSchema = z.number().int().safe().nonnegative();
 export const HydroPidSchema = z.number().int().safe().positive();
@@ -176,6 +232,14 @@ export const EventBatchAckSchema = z.strictObject({
 
 export type EventBatchAck = z.infer<typeof EventBatchAckSchema>;
 
+export const XcpcioMedalCountsSchema = z.strictObject({
+  gold: z.number().int().safe().nonnegative(),
+  silver: z.number().int().safe().nonnegative(),
+  bronze: z.number().int().safe().nonnegative(),
+});
+
+export const XcpcioMedalsSchema = z.record(GroupNameSchema, XcpcioMedalCountsSchema);
+
 export const LeagueConfigSchema = z.strictObject({
   protocol_version: ProtocolVersionSchema,
   league_id: OpaqueIdSchema,
@@ -188,6 +252,7 @@ export const LeagueConfigSchema = z.strictObject({
   unfreeze_at: IsoDateTimeSchema.nullable().default(null),
   penalty_seconds: z.number().int().nonnegative().default(1200),
   xcpcio_preset: z.enum(['ICPC', 'CCPC']).default('ICPC'),
+  xcpcio_medals: XcpcioMedalsSchema.optional(),
 }).superRefine((config, ctx) => {
   const startsAt = Date.parse(config.starts_at);
   const endsAt = Date.parse(config.ends_at);
@@ -225,8 +290,8 @@ export const TeamSchema = z.strictObject({
   is_official: z.boolean(),
   members: z.array(z.string().trim().min(1).max(100)).max(10).default([]),
   coach: z.string().trim().max(100).optional(),
-  groups: z.array(OpaqueIdSchema).max(20).default([]),
-  badge_url: z.string().url().optional(),
+  groups: z.array(GroupNameSchema).max(20).default([]),
+  badge_url: BadgeUrlSchema.optional(),
 });
 
 export type Team = z.output<typeof TeamSchema>;

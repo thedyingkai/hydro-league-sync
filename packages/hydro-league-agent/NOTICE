@@ -56,4 +56,11 @@ Their package metadata and license files are retained under `node_modules` in
 the release tarball. React, React DOM, and Hydro remain host-provided peers and
 are not bundled.
 
+The school badge files named `besti.png`, `buct.jpg`, and `muc.png` under
+`public/hydro-league-xcpcio/school-badges` were provided by the contest
+organizer solely for organization identification. Ownership and trademark rights
+remain with the respective schools. These badge files are not licensed under
+the AGPL. Each deployer must ensure it has authorization to use them and may
+replace or remove them for its deployment.
+
 This project is not affiliated with or endorsed by the ICPC Foundation.

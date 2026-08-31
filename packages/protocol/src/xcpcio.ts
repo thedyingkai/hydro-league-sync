@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { coalesceSubmissionEvents } from './events.js';
 import { isScoreboardFrozen, ScoreboardInputError } from './scoring.js';
 import {
+  BadgeUrlSchema,
   isAcceptedStatus,
   isPenaltyStatus,
   isPendingStatus,
@@ -10,6 +11,7 @@ import {
   ProblemSchema,
   ScoreboardViewSchema,
   TeamSchema,
+  XcpcioMedalsSchema,
   type CanonicalStatus,
   type LeagueConfig,
   type LeagueConfigInput,
@@ -51,7 +53,7 @@ export const XcpcioContestSchema = z.strictObject({
     incorrect: z.boolean(),
     pending: z.boolean(),
   }),
-  medal: z.enum(['icpc', 'ccpc']),
+  medal: z.union([z.enum(['icpc', 'ccpc']), XcpcioMedalsSchema]),
   balloon_color: z.array(z.strictObject({
     color: z.string(),
     background_color: z.string(),
@@ -67,7 +69,7 @@ export const XcpcioTeamSchema = z.strictObject({
   members: z.array(z.string()),
   coach: z.string().optional(),
   group: z.array(z.string()),
-  badge: z.strictObject({ url: z.string().url() }).optional(),
+  badge: z.strictObject({ url: BadgeUrlSchema }).optional(),
 });
 
 export const XcpcioSubmissionSchema = z.strictObject({
@@ -214,7 +216,7 @@ export function toXcpcioAllInOne(input: ToXcpcioAllInOneInput): XcpcioAllInOne {
       group: groups,
       organization: 'School',
       status_time_display: { correct: true, incorrect: true, pending: true },
-      medal: config.xcpcio_preset === 'ICPC' ? 'icpc' : 'ccpc',
+      medal: config.xcpcio_medals ?? (config.xcpcio_preset === 'ICPC' ? 'icpc' : 'ccpc'),
       ...(hasCompleteColors ? {
         balloon_color: problems.map((problem) => ({
           color: '#000000',

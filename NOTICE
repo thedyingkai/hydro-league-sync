@@ -6,4 +6,11 @@ This project is distributed under the GNU Affero General Public License v3.0.
 Components derived from Hydro and hydro-realboard retain their original copyright,
 license, attribution, and NOTICE files in the corresponding package directories.
 
+The school badge files named `besti.png`, `buct.jpg`, and `muc.png` under the
+XCPCIO public asset directories were provided by the contest organizer solely
+for organization identification. Ownership and trademark rights remain with
+the respective schools. These badge files are not licensed under the AGPL.
+Each deployer must ensure it has authorization to use them and may replace or
+remove them for its deployment.
+
 The project is not affiliated with or endorsed by the ICPC Foundation.

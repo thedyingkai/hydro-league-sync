@@ -4,6 +4,7 @@ import path from 'node:path';
 import process from 'node:process';
 import readWorkbook from 'read-excel-file/node';
 import {
+  OPTIONAL_SHEETS,
   REQUIRED_SHEETS,
   WorkbookValidationError,
   convertWorkbookRows,
@@ -106,8 +107,9 @@ async function main() {
   const missing = REQUIRED_SHEETS.filter((sheet) => !availableSheets.includes(sheet));
   if (missing.length) throw new WorkbookValidationError(missing.map((sheet) => `缺少工作表“${sheet}”`));
 
+  const importedSheets = new Set([...REQUIRED_SHEETS, ...OPTIONAL_SHEETS]);
   const sheets = Object.fromEntries(
-    workbook.filter((entry) => REQUIRED_SHEETS.includes(entry.sheet))
+    workbook.filter((entry) => importedSheets.has(entry.sheet))
       .map((entry) => [entry.sheet, entry.data]),
   );
   await mkdir(outputDirectory, { recursive: true });

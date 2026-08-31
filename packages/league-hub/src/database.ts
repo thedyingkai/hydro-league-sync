@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { canonicalJson } from '@hydro-league-sync/protocol';
 import type {
   EventBatch,
+  HubAward,
   HubConfiguration,
   HubContestConfig,
   HubProblem,
@@ -174,6 +175,8 @@ export class HubDatabase {
         freeze_time TEXT,
         unfreeze_at TEXT,
         penalty_minutes INTEGER NOT NULL DEFAULT 20,
+        xcpcio_medals_json TEXT,
+        awards_json TEXT NOT NULL DEFAULT '[]',
         updated_at TEXT NOT NULL
       );
 
@@ -200,6 +203,8 @@ export class HubDatabase {
         school_name TEXT,
         official INTEGER NOT NULL DEFAULT 1,
         hidden INTEGER NOT NULL DEFAULT 0,
+        groups_json TEXT NOT NULL DEFAULT '[]',
+        badge_url TEXT,
         updated_at TEXT NOT NULL
       );
 
@@ -379,6 +384,22 @@ export class HubDatabase {
     if (!siteColumnNames.has('hydro_version')) {
       this.db.exec('ALTER TABLE sites ADD COLUMN hydro_version TEXT');
     }
+    const contestColumns = this.db.prepare('PRAGMA table_info(contest_config)').all() as DbRow[];
+    const contestColumnNames = new Set(contestColumns.map((column) => String(column.name)));
+    if (!contestColumnNames.has('xcpcio_medals_json')) {
+      this.db.exec('ALTER TABLE contest_config ADD COLUMN xcpcio_medals_json TEXT');
+    }
+    if (!contestColumnNames.has('awards_json')) {
+      this.db.exec("ALTER TABLE contest_config ADD COLUMN awards_json TEXT NOT NULL DEFAULT '[]'");
+    }
+    const teamColumns = this.db.prepare('PRAGMA table_info(teams)').all() as DbRow[];
+    const teamColumnNames = new Set(teamColumns.map((column) => String(column.name)));
+    if (!teamColumnNames.has('groups_json')) {
+      this.db.exec("ALTER TABLE teams ADD COLUMN groups_json TEXT NOT NULL DEFAULT '[]'");
+    }
+    if (!teamColumnNames.has('badge_url')) {
+      this.db.exec('ALTER TABLE teams ADD COLUMN badge_url TEXT');
+    }
   }
 
   private withTransaction<T>(callback: () => T): T {
@@ -408,6 +429,9 @@ export class HubDatabase {
       freeze_time: row.freeze_time === null ? null : String(row.freeze_time),
       unfreeze_at: row.unfreeze_at === null ? null : String(row.unfreeze_at),
       penalty_minutes: Number(row.penalty_minutes),
+      ...(row.xcpcio_medals_json === null
+        ? {}
+        : { xcpcio_medals: parseJson<NonNullable<HubContestConfig['xcpcio_medals']>>(String(row.xcpcio_medals_json), {}) }),
     };
   }
 
@@ -454,7 +478,14 @@ export class HubDatabase {
       ...(row.school_name === null ? {} : { school_name: String(row.school_name) }),
       official: Boolean(row.official),
       hidden: Boolean(row.hidden),
+      groups: parseJson<string[]>(String(row.groups_json), []),
+      ...(row.badge_url === null ? {} : { badge_url: String(row.badge_url) }),
     }));
+  }
+
+  getAwards(): HubAward[] {
+    const row = this.db.prepare('SELECT awards_json FROM contest_config WHERE singleton = 1').get() as DbRow | undefined;
+    return row ? parseJson<HubAward[]>(row.awards_json, []) : [];
   }
 
   getProblems(): HubProblem[] {
@@ -493,6 +524,7 @@ export class HubDatabase {
       problems: this.getProblems(),
       team_mappings: this.getTeamMappings(),
       problem_mappings: this.getProblemMappings(),
+      awards: this.getAwards(),
     };
   }
 
@@ -507,8 +539,9 @@ export class HubDatabase {
 
       this.db.prepare(`
         INSERT INTO contest_config
-          (singleton, contest_id, name, start_time, end_time, freeze_time, unfreeze_at, penalty_minutes, updated_at)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+          (singleton, contest_id, name, start_time, end_time, freeze_time, unfreeze_at, penalty_minutes,
+            xcpcio_medals_json, awards_json, updated_at)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(singleton) DO UPDATE SET
           contest_id = excluded.contest_id,
           name = excluded.name,
@@ -517,6 +550,8 @@ export class HubDatabase {
           freeze_time = excluded.freeze_time,
           unfreeze_at = excluded.unfreeze_at,
           penalty_minutes = excluded.penalty_minutes,
+          xcpcio_medals_json = excluded.xcpcio_medals_json,
+          awards_json = excluded.awards_json,
           updated_at = excluded.updated_at
       `).run(
         config.contest.contest_id,
@@ -526,6 +561,8 @@ export class HubDatabase {
         config.contest.freeze_time ?? null,
         config.contest.unfreeze_at ?? null,
         config.contest.penalty_minutes ?? 20,
+        config.contest.xcpcio_medals === undefined ? null : JSON.stringify(config.contest.xcpcio_medals),
+        JSON.stringify(config.awards ?? []),
         now,
       );
 
@@ -557,11 +594,21 @@ export class HubDatabase {
 
       this.db.exec('DELETE FROM team_mappings; DELETE FROM problem_mappings; DELETE FROM teams; DELETE FROM problems;');
       const insertTeam = this.db.prepare(`
-        INSERT INTO teams (team_id, name, school_id, school_name, official, hidden, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO teams (team_id, name, school_id, school_name, official, hidden, groups_json, badge_url, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       for (const team of config.teams) {
-        insertTeam.run(team.team_id, team.name, team.school_id, team.school_name ?? null, bool(team.official, true), bool(team.hidden), now);
+        insertTeam.run(
+          team.team_id,
+          team.name,
+          team.school_id,
+          team.school_name ?? null,
+          bool(team.official, true),
+          bool(team.hidden),
+          JSON.stringify(team.groups ?? []),
+          team.badge_url ?? null,
+          now,
+        );
       }
 
       const insertProblem = this.db.prepare(`

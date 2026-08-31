@@ -9,8 +9,8 @@ Hydro League Sync 把多所学校各自部署的 Hydro 比赛可靠汇总为一�
 - public 封榜与 jury 实时视图严格隔离；学校断联时继续展示已有数据并标注榜单可能不完整。
 - 复用自托管的 XCPCIO Board scoreboard-only fork，提供 `leagueboard` 与 `league-xcpcio`。
 - 复用 HandsomeRun Hydro Realboard 的动画和队列模型，提供 `league-realboard`，不覆盖现有 `realboard`。
-- 赛后导出符合 ICPC Contest API `2023-06` 的 Contest Data Package，供 ICPC Tools Resolver 使用。
-- Excel 一次生成 Hub 全量配置、每校独立 HMAC 密钥、队伍 UID 映射和题目 PID 映射。
+- 赛后导出符合 ICPC Contest API `2023-06` 的 Contest Data Package；同源 PNG/JPEG 校徽会以 `56x56` 和 `160x160` 两种 organization logo 写入包内，供 ICPC Tools Resolver 离线使用。
+- Excel 一次生成 Hub 全量配置、每校独立 HMAC 密钥、队伍 UID 映射、题目 PID 映射，以及可选的校徽、XCPCIO 奖牌分组和人工奖项。
 
 ## 组件
 
@@ -58,6 +58,8 @@ $CenterUrl = 'https://hub.example.edu'
 npm run import:config -- $Workbook $PrivateDir $CenterUrl
 ```
 
+原有“联赛配置、学校信息、队伍账号映射、题目映射”四表模板保持兼容。需要定制榜单时，可在“学校信息”末尾追加 `校徽URL`，在“队伍账号映射”末尾追加 `奖牌分组`，并按需使用“奖牌设置”和“人工奖项”工作表；两张可选表没有数据行时不会生成对应配置。精确表头和校验规则见[部署与赛时运行手册](docs/02-部署与赛时运行手册.md#4-excel-收集与配置生成)。
+
 生成目录含管理员令牌、站点密钥和账号映射，必须放在受限私密目录中。不要提交、截图或公开其中的 `.env.hub`、`site-secrets.json`、`hub-config.json` 和 `site-configs/*.json`。
 
 启动本地 Hub：
@@ -72,8 +74,8 @@ Hub 启动后，使用管理员 Bearer 把完整 `hub-config.json` 全量 `PUT` 
 正式中心可直接加载 Release 中的离线 Docker 镜像归档，不需要在服务器重新构建：
 
 ```bash
-gzip -dc hydro-league-hub-0.1.0-linux-amd64.docker.tar.gz | docker load
-HYDRO_LEAGUE_IMAGE=hydro-league-hub:0.1.0 \
+gzip -dc hydro-league-hub-0.1.1-linux-amd64.docker.tar.gz | docker load
+HYDRO_LEAGUE_IMAGE=hydro-league-hub:0.1.1 \
   docker compose --env-file .env.hub -f deploy/hub/compose.remote.yml up -d
 ```
 
@@ -83,7 +85,7 @@ HYDRO_LEAGUE_IMAGE=hydro-league-hub:0.1.0 \
 
 每所学校需要三份公开 Release 文件和一份私密配置：
 
-1. `hydro-league-agent-0.1.0.tgz`。
+1. `hydro-league-agent-0.1.1.tgz`。
 2. `install-beta9.sh`。
 3. `SHA256SUMS.txt`。
 4. 赛事方单独生成的本校 `site-configs/<site-id>.json`。该文件含本校 HMAC 密钥，不得转发给其他学校。
@@ -92,9 +94,9 @@ HYDRO_LEAGUE_IMAGE=hydro-league-hub:0.1.0 \
 
 ```bash
 sudo -i
-sha256sum hydro-league-agent-0.1.0.tgz
-bash /path/to/repository/deploy/school/install-beta9.sh \
-  /absolute/path/hydro-league-agent-0.1.0.tgz
+sha256sum hydro-league-agent-0.1.1.tgz
+bash ./install-beta9.sh \
+  /absolute/path/hydro-league-agent-0.1.1.tgz
 ```
 
 脚本会先核对 Release 包 SHA-256 和宿主机 `hydrooj@5.0.0-beta.9`，备份旧状态、使用包内锁定的纯 JavaScript 运行依赖、确认插件内没有第二套 Hydro 或 React、登记 Addon、重启 PM2 并检查本机健康页。安装过程不访问 npm registry。安装器不修改已有插件配置；首次安装在没有配置时保持禁用，升级时保留原配置。安装失败时脚本恢复原 Addon 注册和目录。非标准 Hydro 用户、非 root 安装或非 PM2 进程请按 [学校端插件说明](packages/hydro-league-agent/README.md) 手工完成同样步骤。

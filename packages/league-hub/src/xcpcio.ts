@@ -23,15 +23,19 @@ export function buildXcpcio(
     site_id: teamMappings.find((mapping) => mapping.team_id === team.team_id)?.site_id ?? fallbackSiteId,
     is_official: team.official !== false,
     members: [],
-    groups: [],
+    groups: team.groups ?? [],
+    ...(team.badge_url ? { badge_url: team.badge_url } : {}),
   }));
-  const problems = database.getProblems().map((problem, index) => ({
-    global_problem_id: problem.problem_id,
-    label: problem.label,
-    name: problem.name,
-    ordinal: problem.ordinal ?? index,
-    ...(problem.color ? { color: problem.color } : {}),
-  }));
+  const problems = database.getProblems().map((problem, index) => {
+    const color = problem.rgb ?? problem.color;
+    return {
+      global_problem_id: problem.problem_id,
+      label: problem.label,
+      name: problem.name,
+      ordinal: problem.ordinal ?? index,
+      ...(color ? { color } : {}),
+    };
+  });
   const events = database.getEvents(contest.contest_id).flatMap((event) => {
     if (!event.team_id || !event.problem_id) return [];
     return [MappedSubmissionEventSchema.parse({
@@ -69,6 +73,7 @@ export function buildXcpcio(
       unfreeze_at: database.getContestPublishedAt(contest.contest_id) ?? contest.unfreeze_at ?? null,
       penalty_seconds: (contest.penalty_minutes ?? 20) * 60,
       xcpcio_preset: 'ICPC',
+      ...(contest.xcpcio_medals ? { xcpcio_medals: contest.xcpcio_medals } : {}),
     },
     teams,
     problems,

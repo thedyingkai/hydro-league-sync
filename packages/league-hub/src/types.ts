@@ -1,5 +1,11 @@
 export type SiteStatus = 'ONLINE' | 'DELAYED' | 'OFFLINE';
 
+export interface XcpcioMedalCounts {
+  gold: number;
+  silver: number;
+  bronze: number;
+}
+
 export interface HubContestConfig {
   contest_id: string;
   name: string;
@@ -8,6 +14,7 @@ export interface HubContestConfig {
   freeze_time?: string | null;
   unfreeze_at?: string | null;
   penalty_minutes?: number;
+  xcpcio_medals?: Record<string, XcpcioMedalCounts>;
 }
 
 export interface HubSite {
@@ -25,6 +32,14 @@ export interface HubTeam {
   school_name?: string;
   official?: boolean;
   hidden?: boolean;
+  groups?: string[];
+  badge_url?: string;
+}
+
+export interface HubAward {
+  award_id: string;
+  citation: string;
+  team_ids: string[];
 }
 
 export interface HubProblem {
@@ -61,6 +76,7 @@ export interface HubConfiguration {
   problems: HubProblem[];
   team_mappings: TeamMapping[];
   problem_mappings: ProblemMapping[];
+  awards?: HubAward[];
 }
 
 export interface IngestEvent {

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { unzipSync, strFromU8 } from 'fflate';
 import { EventBatchAckSchema } from '@hydro-league-sync/protocol';
@@ -27,10 +27,22 @@ function configuration(): HubConfiguration {
       freeze_time: '2026-08-30T03:20:00.000Z',
       end_time: '2026-08-30T06:00:00.000Z',
       penalty_minutes: 20,
+      xcpcio_medals: {
+        official: { gold: 1, silver: 1, bronze: 0 },
+        freshman: { gold: 1, silver: 0, bronze: 0 },
+      },
     },
     sites: [{ site_id: siteId, name: 'A 校测评站', school_name: 'A 校', secret: siteSecret }],
     teams: [
-      { team_id: 'team-1', name: '一队', school_id: 'school-a', school_name: 'A 校', official: true },
+      {
+        team_id: 'team-1',
+        name: '一队',
+        school_id: 'school-a',
+        school_name: 'A 校',
+        official: true,
+        groups: ['freshman'],
+        badge_url: 'https://scoreboard.example/assets/school-a.png',
+      },
       { team_id: 'team-2', name: '二队', school_id: 'school-a', school_name: 'A 校', official: true },
       { team_id: 'team-star', name: '打星队', school_id: 'school-a', school_name: 'A 校', official: false },
     ],
@@ -46,6 +58,11 @@ function configuration(): HubConfiguration {
     problem_mappings: [
       { site_id: siteId, domain_id: 'system', contest_id: '1', local_pid: '1001', problem_id: 'problem-a' },
       { site_id: siteId, domain_id: 'system', contest_id: '1', local_pid: '1002', problem_id: 'problem-b' },
+    ],
+    awards: [
+      { award_id: 'winner', citation: 'Champion', team_ids: ['team-1'] },
+      { award_id: 'first-to-solve-a', citation: 'First to solve problem A', team_ids: ['team-2'] },
+      { award_id: 'first-to-solve-b', citation: 'First to solve problem B', team_ids: [] },
     ],
   };
 }
@@ -184,12 +201,27 @@ test('health checks and admin configuration keep secrets out of responses', asyn
   assert.match(wrapper.body, /hydro-league-xcpcio\/bootstrap\.js/);
   assert.doesNotMatch(wrapper.body, /<table/i);
   assert.match(String(wrapper.headers['content-security-policy'] ?? ''), /frame-ancestors 'self'/);
+  assert.match(
+    String(wrapper.headers['content-security-policy'] ?? ''),
+    /img-src 'self' data: blob: http: https:;/,
+  );
+  assert.match(wrapper.body, /img-src 'self' data: blob: http: https:;/);
   assert.equal(wrapper.headers['x-content-type-options'], 'nosniff');
 
   const bootstrap = await hub.app.inject({ method: 'GET', url: '/hydro-league-xcpcio/bootstrap.js' });
   assert.equal(bootstrap.statusCode, 200, bootstrap.body);
   assert.match(bootstrap.body, /\/api\/v1\/scoreboard\/xcpcio\.json/);
   assert.match(bootstrap.body, /leagueboard\|league-xcpcio/);
+  const bundledBadge = await hub.app.inject({
+    method: 'GET',
+    url: '/hydro-league-xcpcio/school-badges/besti.png',
+  });
+  assert.equal(bundledBadge.statusCode, 200, bundledBadge.body);
+  assert.equal(bundledBadge.headers['content-type'], 'image/png');
+  assert.equal(
+    createHash('sha256').update(bundledBadge.rawPayload).digest('hex'),
+    '4af16620f91d5472087f1d41d1f4e4d20503f5a22aa2b0ee8de26b6e62300d17',
+  );
   assert.equal((await hub.app.inject({
     method: 'GET',
     url: '/hydro-league-xcpcio/%2e%2e/package.json',
@@ -467,6 +499,18 @@ test('scoreboard applies ACM rules, excludes CE penalty, preserves freeze, and p
     item.submission_id.endsWith('/frozen-ac')
   )).status, 'FROZEN');
   assert.equal(xcpcio.json().league_status.complete, false);
+  assert.deepEqual(xcpcio.json().contest.medal, configuration().contest.xcpcio_medals);
+  assert.deepEqual(
+    xcpcio.json().teams.find((team: { team_id: string }) => team.team_id === 'team-1'),
+    {
+      team_id: 'team-1',
+      name: '一队',
+      organization: 'A 校',
+      members: [],
+      group: ['official', 'freshman'],
+      badge: { url: 'https://scoreboard.example/assets/school-a.png' },
+    },
+  );
   assert.match(xcpcio.json().league_status.message, /当前名次可能不完整/);
   assert.deepEqual(
     Object.keys(xcpcio.json().league_status.sites[0]).sort(),
@@ -650,6 +694,7 @@ test('site status, cursor stream, quarantine, snapshot, Contest API, and CDP exp
   });
   assert.ok(notifications.some((item) => item.type === 'contest' && item.id === null));
   assert.ok(notifications.some((item) => item.type === 'state' && item.id === null));
+  assert.ok(notifications.some((item) => item.type === 'awards' && item.id === 'winner'));
   assert.equal(notifications.some((item) => item.type === 'scoreboard'), false, 'aggregate scoreboard has no notification');
   assert.equal(notifications.some((item) => item.op !== undefined), false, '2023-06 notifications have no legacy op field');
   for (const notification of notifications.filter((item) => item.id !== null)) {
@@ -694,6 +739,25 @@ test('site status, cursor stream, quarantine, snapshot, Contest API, and CDP exp
   });
   assert.equal(teamItem.statusCode, 200, teamItem.body);
   assert.equal(teamItem.json().id, 'team-1');
+  assert.deepEqual(teamItem.json().group_ids, ['official', 'freshman']);
+  const organizationItem = await hub.app.inject({
+    method: 'GET',
+    url: `/api/contests/${leagueId}/organizations/school-a`,
+    headers: { authorization: `Bearer ${adminToken}` },
+  });
+  assert.equal(organizationItem.statusCode, 200, organizationItem.body);
+  assert.equal(organizationItem.json().logo, undefined, 'unverified remote images are not Contest API FILEs');
+  const awards = await hub.app.inject({
+    method: 'GET',
+    url: `/api/contests/${leagueId}/awards`,
+    headers: { authorization: `Bearer ${adminToken}` },
+  });
+  assert.equal(awards.statusCode, 200, awards.body);
+  assert.deepEqual(awards.json(), [
+    { id: 'winner', citation: 'Champion', team_ids: ['team-1'] },
+    { id: 'first-to-solve-a', citation: 'First to solve problem A', team_ids: ['team-2'] },
+    { id: 'first-to-solve-b', citation: 'First to solve problem B', team_ids: [] },
+  ]);
   const missingTeamItem = await hub.app.inject({
     method: 'GET',
     url: `/api/contests/${leagueId}/teams/missing-team`,
@@ -754,13 +818,23 @@ test('site status, cursor stream, quarantine, snapshot, Contest API, and CDP exp
   });
   assert.equal(cdp.statusCode, 200, cdp.body);
   const files = unzipSync(new Uint8Array(cdp.rawPayload));
-  for (const filename of ['api.json', 'contest.json', 'contest.yaml', 'problems.json', 'problems.yaml', 'event-feed.ndjson']) {
+  for (const filename of ['api.json', 'contest.json', 'contest.yaml', 'problems.json', 'problems.yaml', 'awards.json', 'event-feed.ndjson']) {
     assert.ok(files[filename], `CDP contains ${filename}`);
   }
   const cdpContest = JSON.parse(strFromU8(files['contest.json']!));
   assert.equal(cdpContest.penalty_time, 20);
+  assert.equal(files['organizations/school-a/school-a.png'], undefined, 'absolute badge URLs are not local CDP files');
+  assert.deepEqual(JSON.parse(strFromU8(files['awards.json']!)), awards.json());
   const cdpFeed = strFromU8(files['event-feed.ndjson']!).trim().split('\n').map((line) => JSON.parse(line));
   assert.equal(cdpFeed.some((item) => Object.hasOwn(item, 'op')), false);
+  assert.deepEqual(
+    cdpFeed.filter((item) => item.type === 'awards').map((item) => item.data),
+    awards.json(),
+  );
+  assert.deepEqual(
+    cdpFeed.find((item) => item.type === 'organizations')?.data.logo,
+    organizationItem.json().logo,
+  );
   assert.equal(cdpFeed.at(-1).type, 'state');
   assert.equal(cdpFeed.at(-1).id, null);
   assert.ok(cdpFeed.at(-1).data.thawed, 'a finalized frozen Resolver package is explicitly thawed');

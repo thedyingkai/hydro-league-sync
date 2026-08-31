@@ -13,6 +13,7 @@ import {
   type XcpcioAllInOne,
 } from '@hydro-league-sync/protocol';
 import { createAuthenticator } from './auth.js';
+import { badgeUrlKind } from './badge-url.js';
 import { resolveHubOptions, type HubOptions, type ResolvedHubOptions } from './config.js';
 import {
   BatchIdConflictError,
@@ -85,6 +86,48 @@ function optionalBoolean(value: unknown, field: string): boolean | undefined {
   return value;
 }
 
+function stringArray(value: unknown, field: string): string[] {
+  if (!Array.isArray(value)) throw new Error(`${field} must be an array`);
+  const parsed = value.map((item, index) => shortString(item, `${field}[${index}]`));
+  if (new Set(parsed).size !== parsed.length) throw new Error(`${field} values must be unique`);
+  return parsed;
+}
+
+function badgeUrl(value: unknown, field: string): string {
+  const text = requiredString(value, field);
+  const kind = badgeUrlKind(text);
+  if (kind === 'root-relative' || kind === 'absolute-http') return text;
+  if (text.startsWith('/')) {
+    throw new Error(`${field} must be a safe root-relative path`);
+  }
+  try {
+    const url = new URL(text);
+    if (['http:', 'https:'].includes(url.protocol) && (url.username || url.password)) {
+      throw new Error(`${field} must be an absolute HTTP(S) URL without credentials`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('without credentials')) throw error;
+  }
+  throw new Error(`${field} must be a safe root-relative path or an absolute HTTP(S) URL without credentials`);
+}
+
+function medalConfiguration(value: unknown, field: string): Record<string, { gold: number; silver: number; bronze: number }> {
+  if (!object(value)) throw new Error(`${field} must be an object`);
+  const result: Record<string, { gold: number; silver: number; bronze: number }> = {};
+  for (const [group, counts] of Object.entries(value)) {
+    const groupName = shortString(group, `${field} group`);
+    if (!object(counts)) throw new Error(`${field}.${groupName} must be an object`);
+    const unknown = Object.keys(counts).find((key) => !['gold', 'silver', 'bronze'].includes(key));
+    if (unknown) throw new Error(`${field}.${groupName} contains unknown field ${unknown}`);
+    result[groupName] = {
+      gold: nonNegativeInteger(counts.gold, `${field}.${groupName}.gold`),
+      silver: nonNegativeInteger(counts.silver, `${field}.${groupName}.silver`),
+      bronze: nonNegativeInteger(counts.bronze, `${field}.${groupName}.bronze`),
+    };
+  }
+  return result;
+}
+
 function normalizeConfigurationBody(body: unknown): unknown {
   if (!object(body) || object(body.contest)) return body;
   const league = object(body.league) ? body.league : object(body.config) ? body.config : null;
@@ -102,6 +145,7 @@ function normalizeConfigurationBody(body: unknown): unknown {
       freeze_time: league.freeze_at,
       unfreeze_at: league.unfreeze_at,
       penalty_minutes: Number(league.penalty_seconds ?? 1_200) / 60,
+      xcpcio_medals: league.xcpcio_medals,
     },
     sites: body.sites,
     teams: teams.map((item) => object(item) ? {
@@ -111,6 +155,8 @@ function normalizeConfigurationBody(body: unknown): unknown {
       school_name: item.organization_name,
       official: item.is_official,
       hidden: false,
+      groups: item.groups,
+      badge_url: item.badge_url,
     } : item),
     problems: problems.map((item) => object(item) ? {
       problem_id: item.global_problem_id,
@@ -136,6 +182,7 @@ function normalizeConfigurationBody(body: unknown): unknown {
       local_pid: String(item.pid ?? ''),
       problem_id: item.global_problem_id,
     } : item),
+    awards: body.awards,
   };
 }
 
@@ -145,6 +192,9 @@ function validateConfiguration(body: unknown): HubConfiguration {
     if (!Array.isArray(body[list])) throw new Error(`${list} must be an array`);
   }
   const contest = body.contest;
+  const xcpcioMedals = contest.xcpcio_medals === undefined
+    ? undefined
+    : medalConfiguration(contest.xcpcio_medals, 'contest.xcpcio_medals');
   const parsed: HubConfiguration = {
     contest: {
       contest_id: requiredString(contest.contest_id, 'contest.contest_id'),
@@ -160,6 +210,7 @@ function validateConfiguration(body: unknown): HubConfiguration {
       penalty_minutes: contest.penalty_minutes === undefined
         ? 20
         : nonNegativeInteger(contest.penalty_minutes, 'contest.penalty_minutes'),
+      ...(xcpcioMedals === undefined ? {} : { xcpcio_medals: xcpcioMedals }),
     },
     sites: (body.sites as unknown[]).map((item, index) => {
       if (!object(item)) throw new Error(`sites[${index}] must be an object`);
@@ -178,6 +229,10 @@ function validateConfiguration(body: unknown): HubConfiguration {
       if (!object(item)) throw new Error(`teams[${index}] must be an object`);
       const official = optionalBoolean(item.official, `teams[${index}].official`);
       const hidden = optionalBoolean(item.hidden, `teams[${index}].hidden`);
+      const groups = item.groups === undefined ? [] : stringArray(item.groups, `teams[${index}].groups`);
+      if (groups.some((group) => group === 'official' || group === 'unofficial')) {
+        throw new Error(`teams[${index}].groups must not contain reserved official or unofficial groups`);
+      }
       return {
         team_id: requiredString(item.team_id, `teams[${index}].team_id`),
         name: requiredString(item.name, `teams[${index}].name`),
@@ -185,6 +240,8 @@ function validateConfiguration(body: unknown): HubConfiguration {
         ...(item.school_name === undefined ? {} : { school_name: requiredString(item.school_name, `teams[${index}].school_name`) }),
         ...(official === undefined ? {} : { official }),
         ...(hidden === undefined ? {} : { hidden }),
+        groups,
+        ...(item.badge_url === undefined ? {} : { badge_url: badgeUrl(item.badge_url, `teams[${index}].badge_url`) }),
       };
     }),
     problems: (body.problems as unknown[]).map((item, index) => {
@@ -225,6 +282,21 @@ function validateConfiguration(body: unknown): HubConfiguration {
         problem_id: requiredString(item.problem_id, `problem_mappings[${index}].problem_id`),
       };
     }),
+    awards: (body.awards === undefined ? [] : (() => {
+      if (!Array.isArray(body.awards)) throw new Error('awards must be an array');
+      return body.awards;
+    })()).map((item, index) => {
+      if (!object(item)) throw new Error(`awards[${index}] must be an object`);
+      const awardId = requiredString(item.award_id, `awards[${index}].award_id`);
+      if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,35}$/.test(awardId) || awardId.endsWith('.')) {
+        throw new Error(`awards[${index}].award_id must be a valid Contest API ID`);
+      }
+      return {
+        award_id: awardId,
+        citation: requiredString(item.citation, `awards[${index}].citation`),
+        team_ids: stringArray(item.team_ids, `awards[${index}].team_ids`),
+      };
+    }),
   };
   if (!Number.isSafeInteger(parsed.contest.penalty_minutes) || (parsed.contest.penalty_minutes ?? 0) < 0) {
     throw new Error('contest.penalty_minutes must be a non-negative integer');
@@ -255,7 +327,24 @@ function validateConfiguration(body: unknown): HubConfiguration {
   }
   const siteIds = new Set(parsed.sites.map((site) => site.site_id));
   const teamIds = new Set(parsed.teams.map((team) => team.team_id));
+  const visibleTeamIds = new Set(parsed.teams.filter((team) => !team.hidden).map((team) => team.team_id));
   const problemIds = new Set(parsed.problems.map((problem) => problem.problem_id));
+  const configuredGroups = new Set([
+    'official',
+    'unofficial',
+    ...parsed.teams.flatMap((team) => team.groups ?? []),
+  ]);
+  for (const group of Object.keys(parsed.contest.xcpcio_medals ?? {})) {
+    if (!configuredGroups.has(group)) throw new Error(`invalid contest.xcpcio_medals: references unknown group ${group}`);
+  }
+  const awardIds = new Set<string>();
+  for (const award of parsed.awards ?? []) {
+    if (awardIds.has(award.award_id)) throw new Error(`award_id values must be unique (${award.award_id})`);
+    awardIds.add(award.award_id);
+    for (const teamId of award.team_ids) {
+      if (!visibleTeamIds.has(teamId)) throw new Error(`invalid award ${award.award_id}: references unknown or hidden team ${teamId}`);
+    }
+  }
   const teamMappingKeys = new Set<string>();
   for (const mapping of parsed.team_mappings) {
     if (!siteIds.has(mapping.site_id)) throw new Error(`team mapping references unknown site ${mapping.site_id}`);
@@ -461,7 +550,7 @@ export function createHubApplication(input: HubOptions = {}): HubApplication {
       if (filePath.endsWith('.html')) {
         response.header(
           'content-security-policy',
-          "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self'; font-src 'self' data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:",
+          "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: blob: http: https:; media-src 'self'; font-src 'self' data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:",
         );
       }
     },
@@ -803,7 +892,7 @@ export function createHubApplication(input: HubOptions = {}): HubApplication {
   const apiInformation = {
     version: '2023-06',
     version_url: 'https://ccs-specs.icpc.io/2023-06/contest_api',
-    provider: { name: 'Hydro League Hub', version: '0.1.0' },
+    provider: { name: 'Hydro League Hub', version: '0.1.1' },
   };
   const accessInformation = {
     capabilities: [],
@@ -813,12 +902,13 @@ export function createHubApplication(input: HubOptions = {}): HubApplication {
       { type: 'languages', properties: ['id', 'name'] },
       { type: 'problems', properties: ['id', 'label', 'name', 'ordinal', 'color', 'rgb'] },
       { type: 'groups', properties: ['id', 'name', 'type'] },
-      { type: 'organizations', properties: ['id', 'name', 'formal_name'] },
+      { type: 'organizations', properties: ['id', 'name', 'formal_name', 'logo'] },
       { type: 'teams', properties: ['id', 'name', 'display_name', 'organization_id', 'group_ids'] },
       { type: 'state', properties: ['started', 'frozen', 'ended', 'thawed', 'finalized', 'end_of_updates'] },
       { type: 'submissions', properties: ['id', 'language_id', 'problem_id', 'team_id', 'time', 'contest_time'] },
       { type: 'judgements', properties: ['id', 'submission_id', 'judgement_type_id', 'start_time', 'start_contest_time', 'end_time', 'end_contest_time'] },
       { type: 'runs', properties: ['id', 'judgement_id', 'ordinal', 'judgement_type_id', 'time', 'contest_time'] },
+      { type: 'awards', properties: ['id', 'citation', 'team_ids'] },
       { type: 'scoreboard', properties: ['time', 'contest_time', 'state', 'rows'] },
       { type: 'event-feed', properties: ['type', 'id', 'data', 'token'] },
     ],
@@ -863,7 +953,7 @@ export function createHubApplication(input: HubOptions = {}): HubApplication {
       return reply.send(result.resources[key]);
     });
   }
-  const collectionResourceNames = ['judgement-types', 'languages', 'groups', 'organizations', 'teams', 'problems', 'submissions', 'judgements', 'runs'] as const;
+  const collectionResourceNames = ['judgement-types', 'languages', 'groups', 'organizations', 'teams', 'problems', 'submissions', 'judgements', 'runs', 'awards'] as const;
   const collectionIdFilters: Record<(typeof collectionResourceNames)[number], readonly string[]> = {
     'judgement-types': [],
     languages: [],
@@ -874,6 +964,7 @@ export function createHubApplication(input: HubOptions = {}): HubApplication {
     submissions: ['language_id', 'problem_id', 'team_id'],
     judgements: ['submission_id', 'judgement_type_id'],
     runs: ['judgement_id', 'judgement_type_id'],
+    awards: [],
   };
   for (const resourceName of collectionResourceNames) {
     app.get<{ Params: { contestId: string }; Querystring: Record<string, string | string[] | undefined> }>(

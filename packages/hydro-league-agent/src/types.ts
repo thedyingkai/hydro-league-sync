@@ -276,7 +276,7 @@ export interface XcpcioAllInOneResponse {
       incorrect: boolean;
       pending: boolean;
     };
-    medal: 'icpc' | 'ccpc';
+    medal: 'icpc' | 'ccpc' | Record<string, { gold: number; silver: number; bronze: number }>;
     balloon_color?: Array<{ color: string; background_color: string }>;
     logo: { preset: 'ICPC' | 'CCPC' };
     options: { submission_timestamp_unit: 'millisecond' };

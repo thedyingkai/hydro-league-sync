@@ -1,6 +1,6 @@
 {
   "name": "hydro-league-agent",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reliable Hydro 5.0.0-beta.9 site agent for multi-school league synchronization.",
   "license": "AGPL-3.0-only",
   "repository": {

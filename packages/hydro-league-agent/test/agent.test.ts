@@ -590,7 +590,7 @@ describe('hub response boundaries', () => {
         last_acked_source_seq: 17,
         hub_high_watermark: 17,
         watermark_consistent: true,
-        agent_version: '0.1.0',
+        agent_version: '0.1.1',
         hydro_version: '5.0.0-beta.9',
       }],
       problems: [{ problem_id: 'problem-a', label: 'A', name: 'Problem A', ordinal: 0, color: null, rgb: null }],
@@ -682,6 +682,80 @@ describe('hub response boundaries', () => {
       },
     };
     expect(parseXcpcioAllInOneResponse(withLeagueStatus)).toBe(withLeagueStatus);
+    for (const url of [
+      'https://assets.example.edu/badges/school-a.png',
+      'http://assets.example.edu:8080/badges/school-a.png?version=2',
+      'https://assets.example.edu/%E6%A0%A1%E5%BE%BD.png?cache=100%25',
+      'https://assets.example.edu/%E5%8C%97%E5%AD%97%F0%9F%8F%AB.png',
+      '/hydro-league-xcpcio/school-badges/besti.png',
+      '/hydro-league-xcpcio/school-badges/%E6%A0%A1%E5%BE%BD.png?cache=100%25',
+      '/hydro-league-xcpcio/school-badges/%E5%8C%97%E5%AD%97%F0%9F%8F%AB.png',
+    ]) {
+      const withBadge = {
+        ...valid,
+        teams: [{ ...valid.teams[0], badge: { url } }],
+      };
+      expect(parseXcpcioAllInOneResponse(withBadge)).toBe(withBadge);
+    }
+    for (const url of [
+      'https://user:password@assets.example.edu/logo.png',
+      'https://@assets.example.edu/logo.png',
+      '//assets.example.edu/logo.png',
+      'data:image/png;base64,AAAA',
+      'file:///tmp/logo.png',
+      'javascript:alert(1)',
+      'badges/logo.png',
+      '/%2fassets.example.edu/logo.png',
+      '/badges/../secret.png',
+      '/badges/%2e%2e/secret.png',
+      '/badges/%252e%252e/secret.png',
+      '/badges/%25252e%25252e/secret.png',
+      '/badges//secret.png',
+      '/badges/%252fsecret.png',
+      '/badges\\secret.png',
+      '/badges/%5csecret.png',
+      '/badges/%00secret.png',
+      '/badges/%C2%85secret.png',
+      '/badges/%E5%8C.png',
+      '/badges/%FF.png',
+      'https://assets.example.edu/badges/../secret.png',
+      'https://assets.example.edu/badges/%2e%2e/secret.png',
+      'https://assets.example.edu/badges/%25252e%25252e/secret.png',
+      'https://assets.example.edu/badges//secret.png',
+      'https://assets.example.edu/logo.png?label=%00',
+      'https://assets.example.edu/logo.png#%5c',
+      'https://assets.example.edu/%E5%8C.png',
+      `/badges/${String.fromCharCode(0)}secret.png`,
+      `/badges/${String.fromCharCode(0x85)}secret.png`,
+    ]) {
+      expect(() => parseXcpcioAllInOneResponse({
+        ...valid,
+        teams: [{ ...valid.teams[0], badge: { url } }],
+      }), url).toThrow(/credential-free HTTP\(S\)|safe root-relative path/);
+    }
+    const withGroupMedals = {
+      ...valid,
+      contest: {
+        ...valid.contest,
+        medal: {
+          official: { gold: 9, silver: 18, bronze: 27 },
+          unofficial: { gold: 2, silver: 0, bronze: 0 },
+        },
+      },
+    };
+    expect(parseXcpcioAllInOneResponse(withGroupMedals)).toBe(withGroupMedals);
+
+    for (const medal of [
+      { official: { gold: -1, silver: 18, bronze: 27 } },
+      { official: { gold: 9.5, silver: 18, bronze: 27 } },
+      { official: { gold: 9, silver: 18 } },
+      { official: { gold: 9, silver: 18, bronze: 27, honorable: 1 } },
+    ]) {
+      expect(() => parseXcpcioAllInOneResponse({
+        ...valid,
+        contest: { ...valid.contest, medal },
+      })).toThrow();
+    }
     expect(() => parseXcpcioAllInOneResponse({
       ...valid,
       contest: { ...valid.contest, extra: 'unexpected' },

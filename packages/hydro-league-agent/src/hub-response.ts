@@ -112,6 +112,59 @@ function array(value: unknown, name: string, maximum = 100_000): unknown[] {
   return value;
 }
 
+const BADGE_URL_FORBIDDEN_CHARACTERS = /[\p{Cc}\\]/u;
+
+function repeatedlyDecodeBadgeUrl(value: string): string | undefined {
+  let decoded = value;
+  for (let pass = 0; pass < 16; pass += 1) {
+    let invalidUtf8 = false;
+    const next = decoded.replace(/(?:%[0-9a-f]{2})+/giu, (sequence: string) => {
+      try {
+        return decodeURIComponent(sequence);
+      } catch {
+        invalidUtf8 = true;
+        return '';
+      }
+    });
+    if (invalidUtf8) return undefined;
+    if (next === decoded) return decoded;
+    decoded = next;
+  }
+  return undefined;
+}
+
+function decodedBadgePathIsSafe(path: string): boolean {
+  const decoded = repeatedlyDecodeBadgeUrl(path);
+  if (decoded === undefined) return false;
+  if (BADGE_URL_FORBIDDEN_CHARACTERS.test(decoded) || decoded.includes('//')) return false;
+  return !decoded.split('/').some((segment) => segment === '..');
+}
+
+function badgeUrl(value: unknown, name: string): string {
+  const urlText = string(value, name, 2_048);
+  const decoded = repeatedlyDecodeBadgeUrl(urlText);
+  if (!urlText || decoded === undefined || BADGE_URL_FORBIDDEN_CHARACTERS.test(decoded)) {
+    throw new TypeError(`${name} must be credential-free HTTP(S) or a safe root-relative path`);
+  }
+  if (urlText.startsWith('/')) {
+    if (!urlText.startsWith('//') && decodedBadgePathIsSafe(urlText.split(/[?#]/u, 1)[0]!)) return urlText;
+    throw new TypeError(`${name} must be credential-free HTTP(S) or a safe root-relative path`);
+  }
+
+  const match = urlText.match(/^https?:\/\/([^/?#]+)(\/[^?#]*)?(?:[?#].*)?$/iu);
+  if (match && !match[1]!.includes('@') && decodedBadgePathIsSafe(match[2] ?? '/')) {
+    try {
+      const parsed = new URL(urlText);
+      if (['http:', 'https:'].includes(parsed.protocol) && parsed.hostname && !parsed.username && !parsed.password) {
+        return urlText;
+      }
+    } catch {
+      // The common error below deliberately avoids reflecting URL contents.
+    }
+  }
+  throw new TypeError(`${name} must be credential-free HTTP(S) or a safe root-relative path`);
+}
+
 const SITE_KEYS = [
   'site_id',
   'name',
@@ -421,7 +474,16 @@ export function parseXcpcioAllInOneResponse(value: unknown): XcpcioAllInOneRespo
   boolean(display.incorrect, 'XCPCIO response.contest.status_time_display.incorrect');
   boolean(display.pending, 'XCPCIO response.contest.status_time_display.pending');
   if (contest.medal !== 'icpc' && contest.medal !== 'ccpc') {
-    throw new TypeError('XCPCIO response.contest.medal is invalid');
+    const medals = record(contest.medal, 'XCPCIO response.contest.medal');
+    Object.entries(medals).forEach(([group, input]) => {
+      string(group, 'XCPCIO response.contest.medal group', 128);
+      const name = `XCPCIO response.contest.medal.${group}`;
+      const counts = record(input, name);
+      keys(counts, ['gold', 'silver', 'bronze'], ['gold', 'silver', 'bronze'], name);
+      integer(counts.gold, `${name}.gold`);
+      integer(counts.silver, `${name}.silver`);
+      integer(counts.bronze, `${name}.bronze`);
+    });
   }
   if (contest.balloon_color !== undefined) {
     const colors = array(contest.balloon_color, 'XCPCIO response.contest.balloon_color', 10_000);
@@ -464,12 +526,7 @@ export function parseXcpcioAllInOneResponse(value: unknown): XcpcioAllInOneRespo
     if (team.badge !== undefined) {
       const badge = record(team.badge, `${name}.badge`);
       keys(badge, ['url'], ['url'], `${name}.badge`);
-      const url = string(badge.url, `${name}.badge.url`, 2_048);
-      try {
-        new URL(url);
-      } catch {
-        throw new TypeError(`${name}.badge.url must be a URL`);
-      }
+      badgeUrl(badge.url, `${name}.badge.url`);
     }
   });
 
