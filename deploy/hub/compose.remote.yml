@@ -1,0 +1,46 @@
+name: hydro-league-sync
+
+x-hub-common: &hub-common
+  image: ${HYDRO_LEAGUE_IMAGE:-hydro-league-hub:0.1.0}
+  pull_policy: never
+  init: true
+  restart: unless-stopped
+  stop_grace_period: 30s
+  mem_limit: 768m
+  cpus: 1.5
+  pids_limit: 256
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  hub:
+    <<: *hub-common
+    container_name: hydro-league-hub
+    environment:
+      HYDRO_LEAGUE_ADMIN_TOKEN: ${HYDRO_LEAGUE_ADMIN_TOKEN:?set HYDRO_LEAGUE_ADMIN_TOKEN}
+      HYDRO_LEAGUE_DELAYED_AFTER_MS: ${HYDRO_LEAGUE_DELAYED_AFTER_MS:-45000}
+      HYDRO_LEAGUE_OFFLINE_AFTER_MS: ${HYDRO_LEAGUE_OFFLINE_AFTER_MS:-180000}
+    ports:
+      - 127.0.0.1:3000:3000
+    volumes:
+      - hub-data:/data
+    networks:
+      - hub-network
+
+volumes:
+  hub-data:
+    name: hydro-league-hub-data
+
+networks:
+  hub-network:
+    name: hydro-league-hub-network

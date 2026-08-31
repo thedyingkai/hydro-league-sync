@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/coverage
+.git
+.tmp
+data
+private-config
+outputs
+.env
+.env.*
+!.env.example
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.tsbuildinfo

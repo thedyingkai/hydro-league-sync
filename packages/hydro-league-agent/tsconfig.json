@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "hydrooj": ["src/shims/hydrooj.d.ts"],
+      "schemastery": ["src/shims/schemastery.d.ts"]
+    },
+    "noEmitOnError": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["test", "dist", "upstream"]
+}

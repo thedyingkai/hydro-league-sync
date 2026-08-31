@@ -1,0 +1,31 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+.xcpcio-load-error {
+  box-sizing: border-box;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  color: #8a1c1c;
+  background: #ffffff;
+  font-size: 15px;
+  text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .xcpcio-load-error {
+    color: #ffb4ab;
+    background: #1a1c1e;
+  }
+}

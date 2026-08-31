@@ -1,0 +1,101 @@
+{
+  "name": "@xcpcio/board-app",
+  "type": "module",
+  "version": "0.85.4",
+  "description": "The ICPC Series Competition Leaderboard Visualization Engine",
+  "author": "Dup4 <hi@dup4.com>",
+  "license": "MIT",
+  "funding": "https://github.com/sponsors/Dup4",
+  "homepage": "https://xcpcio.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xcpcio/xcpcio.git",
+    "directory": "packages/apps/board"
+  },
+  "bugs": {
+    "url": "https://github.com/xcpcio/xcpcio/issues"
+  },
+  "keywords": [
+    "ICPC",
+    "Leaderboard",
+    "Visualization"
+  ],
+  "files": [
+    "./*.{js,ts,json}",
+    "dist",
+    "public",
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@tanstack/vue-query": "^5.101.0",
+    "@unhead/vue": "^3.1.4",
+    "@unocss/reset": "^66.7.2",
+    "@vueuse/core": "^14.3.0",
+    "file-saver": "^2.0.5",
+    "floating-vue": "5.2.2",
+    "flowbite": "^4.0.2",
+    "hls.js": "^1.6.16",
+    "lodash": "^4.18.1",
+    "nprogress": "^0.2.0",
+    "pinia": "^3.0.4",
+    "sleep-promise": "^9.1.0",
+    "vue": "^3.5.38",
+    "vue-i18n": "^11.4.6",
+    "vue-router": "^5.1.0",
+    "vue-search-select": "^3.2.0",
+    "vue-toast-notification": "^3.1.3",
+    "@xcpcio/core": "0.85.4",
+    "@xcpcio/types": "0.85.4"
+  },
+  "devDependencies": {
+    "@iconify/json": "^2.2.488",
+    "@intlify/unplugin-vue-i18n": "^11.2.4",
+    "@types/file-saver": "^2.0.7",
+    "@types/lodash": "^4.17.24",
+    "@types/nprogress": "^0.2.3",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue-macros/volar": "^3.1.2",
+    "@vue/test-utils": "^2.4.11",
+    "critters": "^0.0.25",
+    "cross-env": "^10.1.0",
+    "cypress": "^15.17.0",
+    "cypress-vite": "^1.10.1",
+    "eslint": "^10.5.0",
+    "eslint-plugin-cypress": "^6.4.1",
+    "eslint-plugin-format": "^2.0.1",
+    "git-repo-info": "^2.1.1",
+    "https-localhost": "^4.7.1",
+    "less": "^4.6.6",
+    "rollup": "^4.62.2",
+    "taze": "^19.14.1",
+    "typescript": "^6.0.3",
+    "unocss": "^66.7.2",
+    "unplugin-auto-import": "^21.0.0",
+    "unplugin-vue-components": "^32.1.0",
+    "unplugin-vue-macros": "^2.14.5",
+    "unplugin-vue-router": "^0.18.0",
+    "vite": "^8.0.16",
+    "vite-bundle-visualizer": "^1.2.1",
+    "vite-plugin-html": "^3.2.2",
+    "vite-plugin-inspect": "^11.4.1",
+    "vite-plugin-vue-devtools": "^8.1.3",
+    "vite-plugin-vue-layouts": "^0.11.0",
+    "vite-ssg": "^28.3.0",
+    "vite-ssg-sitemap": "^0.10.0",
+    "vitest": "^4.1.9",
+    "vue-tsc": "^3.3.5"
+  },
+  "scripts": {
+    "dev": "vite --port 3333",
+    "build": "vite build",
+    "preview": "vite preview",
+    "preview-https": "serve dist",
+    "start": "npm run preview",
+    "test:e2e": "cypress open",
+    "typecheck": "vue-tsc --noEmit",
+    "sizecheck": "npx vite-bundle-visualizer"
+  }
+}

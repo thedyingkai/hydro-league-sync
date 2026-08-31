@@ -1,0 +1,59 @@
+Hydro League Agent
+
+Copyright (c) 2026 Hydro League Sync contributors.
+
+This package is distributed under the GNU Affero General Public License
+version 3. The complete license text is in LICENSE.
+
+This package contains and adapts presentation concepts from:
+
+  Hydro Realboard
+  Copyright (c) 2025 HandsomeRun
+  Copyright (c) Hydro development team
+  https://github.com/HandsomeRun/hydro-realboard
+  Upstream commit: fa662b5a1b817d4e73f3f44f5cc0ee9441851a3c
+  License: GNU Affero General Public License version 3
+
+The retained upstream source snapshot and its original LICENSE and NOTICE are
+kept under upstream/hydro-realboard. Upstream-only debug scripts that contained
+the original maintainer's live server address and contest identifiers are not
+distributed because they are not used by this package. The active league adapter in
+frontend/league-realboard.page.tsx retains the fork's React components,
+ranking model, two-stage queues, react-spring transitions, and CSS structure.
+Its WebSocket input was replaced with the authenticated same-origin XCPCIO
+all-in-one proxy, and compile errors were excluded from ACM penalty attempts.
+These adaptations, the new route, reliable synchronization path, access
+control, and server-side cache were added in 2026 by Hydro League Sync
+contributors. The existing Realboard plugin and its route are not replaced.
+
+This package also contains a separate `league-xcpcio` integration based on:
+
+  @hydrooj/scoreboard-xcpcio 0.1.0
+  Copyright (c) Hydro development team
+  License: GNU Affero General Public License version 3 or later
+
+  XCPCIO Board 0.85.4
+  https://github.com/xcpcio/xcpcio
+  Upstream commit: 84dacae07884d90f6db6d6664e55f8552524ef08
+  License: MIT
+
+The distributed XCPCIO assets are built from the scoreboard-only source fork
+under upstream/xcpcio-board-app-scoreboard-only. The fork removes the rating,
+statistics, Resolver, Balloon, and Countdown implementations and removes
+Highcharts, highcharts-vue, and GSAP before compilation. The official XCPCIO
+prebuilt bundle is not included. The exact patch, build record, MIT license,
+and runtime dependency notices are retained under upstream and
+public/hydro-league-xcpcio.
+
+The `league-xcpcio` name, same-origin Hydro proxy, access-control boundary,
+offline wrapper, source fork, and self-hosted assets were added in 2026 by
+Hydro League Sync contributors. Existing Hydro `xcpcio` routes are not
+replaced.
+
+The release package bundles the locked runtime dependencies `@react-spring/*`,
+`schemastery`, and their transitive dependencies for offline installation.
+Their package metadata and license files are retained under `node_modules` in
+the release tarball. React, React DOM, and Hydro remain host-provided peers and
+are not bundled.
+
+This project is not affiliated with or endorsed by the ICPC Foundation.

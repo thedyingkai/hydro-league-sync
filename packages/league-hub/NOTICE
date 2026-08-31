@@ -1,0 +1,18 @@
+Hydro League Sync
+
+Copyright (c) 2026 Hydro League Sync contributors.
+
+This project is distributed under the GNU Affero General Public License v3.0.
+Components derived from Hydro and hydro-realboard retain their original copyright,
+license, attribution, and NOTICE files in the corresponding package directories.
+
+The central scoreboard embeds a source fork of XCPCIO Board 0.85.4
+(https://github.com/xcpcio/xcpcio), upstream commit
+84dacae07884d90f6db6d6664e55f8552524ef08, under the MIT License. The complete
+fork source, patch record, license, runtime dependency notices, and build record
+are retained under upstream/xcpcio-board-app-scoreboard-only and
+public/hydro-league-xcpcio. The fork is reduced to XCPCIO's scoreboard and is
+extended only with the multi-school connection warning and corresponding-source
+link.
+
+The project is not affiliated with or endorsed by the ICPC Foundation.

@@ -1,0 +1,55 @@
+ARG NODE_IMAGE=node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+
+FROM ${NODE_IMAGE} AS build
+
+WORKDIR /app
+COPY package.json package-lock.json tsconfig.base.json .npmrc ./
+COPY packages/protocol/package.json ./packages/protocol/package.json
+COPY packages/league-hub/package.json ./packages/league-hub/package.json
+
+RUN npm ci --omit=peer --ignore-scripts \
+      --workspace @hydro-league-sync/protocol \
+      --workspace @hydro-league-sync/league-hub \
+      --include-workspace-root=false
+
+COPY packages/protocol ./packages/protocol
+COPY packages/league-hub ./packages/league-hub
+
+RUN npm run verify:xcpcio --workspace @hydro-league-sync/league-hub \
+    && npm run build --workspace @hydro-league-sync/protocol \
+    && npm run build --workspace @hydro-league-sync/league-hub
+
+FROM ${NODE_IMAGE} AS production-dependencies
+
+WORKDIR /app
+COPY package.json package-lock.json .npmrc ./
+COPY packages/protocol/package.json ./packages/protocol/package.json
+COPY packages/league-hub/package.json ./packages/league-hub/package.json
+
+RUN npm ci --omit=dev --omit=peer --ignore-scripts \
+      --workspace @hydro-league-sync/protocol \
+      --workspace @hydro-league-sync/league-hub \
+      --include-workspace-root=false \
+    && npm cache clean --force
+
+FROM ${NODE_IMAGE} AS runtime
+
+ENV NODE_ENV=production \
+    HYDRO_LEAGUE_HOST=0.0.0.0 \
+    HYDRO_LEAGUE_PORT=3000 \
+    HYDRO_LEAGUE_DATABASE=/data/league-hub.sqlite
+
+WORKDIR /app
+COPY --chown=node:node package.json package-lock.json tsconfig.base.json .npmrc .env.example .dockerignore README.md LICENSE NOTICE Dockerfile.hub compose.local.yml ./
+COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/packages/protocol ./packages/protocol
+COPY --from=build --chown=node:node /app/packages/league-hub ./packages/league-hub
+RUN mkdir -p /data && chown node:node /data
+
+USER node
+EXPOSE 3000
+VOLUME ["/data"]
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+
+CMD ["node", "--experimental-sqlite", "packages/league-hub/dist/src/cli.js"]

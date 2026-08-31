@@ -1,0 +1,49 @@
+{
+  "name": "@hydro-league-sync/league-hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Central ingestion, scoreboard, and ICPC Contest API service for Hydro League Sync.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "files": [
+    "dist",
+    "public",
+    "src",
+    "test",
+    "tools",
+    "upstream",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "tsconfig.json"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "verify:xcpcio": "node tools/verify-xcpcio-assets.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx --experimental-sqlite watch src/cli.ts",
+    "start": "node --experimental-sqlite dist/src/cli.js",
+    "test": "npm run build && node --experimental-sqlite --test \"dist/test/**/*.test.js\"",
+    "test:coverage": "tsx --experimental-sqlite --test --experimental-test-coverage test/**/*.test.ts"
+  },
+  "dependencies": {
+    "@fastify/static": "10.1.3",
+    "@hydro-league-sync/protocol": "file:../protocol",
+    "fastify": "^5.6.0",
+    "fflate": "^0.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

@@ -1,0 +1,251 @@
+/*
+ * Derived from HandsomeRun/hydro-realboard public/realboard.css at
+ * fa662b5a1b817d4e73f3f44f5cc0ee9441851a3c (AGPL-3.0).
+ */
+
+body {
+  color: #eee;
+  background-color: #121212;
+}
+
+.league-realboard-fork {
+  width: min(1480px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  overflow-x: hidden;
+  background: #1a1a1a;
+}
+
+.league-realboard-fork .rank-list-b-stage {
+  min-height: 720px;
+  position: relative;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.league-realboard-fork .rank-list-item.even {
+  background-color: transparent;
+}
+
+.league-realboard-fork .rank-list-item.odd {
+  background-color: #202020;
+}
+
+.league-realboard-fork .rank-list-single {
+  min-height: 80px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 20px;
+  background: #1a1a1a;
+}
+
+.league-realboard-fork .rank-list-item {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 80px;
+  padding: 10px 0;
+  position: absolute;
+  left: 0;
+  background: transparent;
+}
+
+.league-realboard-fork .header {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: 60px;
+  padding: 10px 0;
+  border-bottom: 1px solid #343434;
+}
+
+.league-realboard-fork .header .rank,
+.league-realboard-fork .header .solved,
+.league-realboard-fork .header .penalty {
+  flex: 0 0 90px;
+  font-size: 20px;
+  text-align: center;
+}
+
+.league-realboard-fork .header .content {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.league-realboard-fork .header .title {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  font-size: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-realboard-fork .header .copyright {
+  flex: 0 0 auto;
+  color: #8a919b;
+  font-size: 15px;
+}
+
+.league-realboard-fork .rank-list-item .rank,
+.league-realboard-fork .rank-list-item .solved,
+.league-realboard-fork .rank-list-item .penalty {
+  flex: 0 0 90px;
+  padding: 10px 0;
+  font-size: 40px;
+  text-align: center;
+}
+
+.league-realboard-fork .rank-list-item .avatar {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-right: 15px;
+  border: 1px solid #59636d;
+  border-radius: 5px;
+  color: #e8edf2;
+  background: #2d3740;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.league-realboard-fork .rank-list-item .content {
+  min-width: 0;
+  height: 60px;
+  flex: 1 1 auto;
+}
+
+.league-realboard-fork .rank-list-item .name {
+  overflow: hidden;
+  margin-bottom: 6px;
+  font-size: 30px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-realboard-fork .rank-list-item .problems {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.league-realboard-fork .rank-list-item .problems .item {
+  box-sizing: border-box;
+  flex: 0 0 95px;
+  overflow: hidden;
+  padding: 2px;
+  border-radius: 5px;
+  font-size: 20px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-realboard-fork .ac {
+  background-color: #009c00;
+}
+
+.league-realboard-fork .failed,
+.league-realboard-fork .wa,
+.league-realboard-fork .re {
+  background-color: #dd514c;
+}
+
+.league-realboard-fork .frozen {
+  background-color: #3c6ef6;
+}
+
+.league-realboard-fork .untouched {
+  color: #8a919b;
+  background-color: #282828;
+}
+
+.league-realboard-fork .pnd {
+  color: #000;
+  background-color: #ff9800;
+}
+
+.league-realboard-fork .ce {
+  background-color: #7f8c8d;
+}
+
+.league-realboard-fork .tle {
+  background-color: #8e44ad;
+}
+
+.league-realboard-fork .blink {
+  animation: realboard-blink 500ms infinite;
+}
+
+.league-realboard-fork .realboard-warning {
+  padding: 12px 18px;
+  border-left: 4px solid #c53b32;
+  color: #ffe7e4;
+  background: #48201e;
+  font-size: 15px;
+}
+
+.league-realboard-fork .realboard-source {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-top: 1px solid #343434;
+  color: #9aa4ae;
+  font-size: 13px;
+}
+
+.league-realboard-fork .realboard-source a {
+  color: #a8cbff;
+}
+
+@keyframes realboard-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@media (max-width: 760px) {
+  .league-realboard-fork .header .rank,
+  .league-realboard-fork .header .solved,
+  .league-realboard-fork .header .penalty,
+  .league-realboard-fork .rank-list-item .rank,
+  .league-realboard-fork .rank-list-item .solved,
+  .league-realboard-fork .rank-list-item .penalty {
+    flex-basis: 56px;
+  }
+
+  .league-realboard-fork .header .copyright {
+    display: none;
+  }
+
+  .league-realboard-fork .rank-list-item .avatar {
+    width: 42px;
+    height: 42px;
+    margin-right: 8px;
+    font-size: 18px;
+  }
+
+  .league-realboard-fork .rank-list-item .name {
+    font-size: 18px;
+  }
+
+  .league-realboard-fork .rank-list-item .rank,
+  .league-realboard-fork .rank-list-item .solved,
+  .league-realboard-fork .rank-list-item .penalty {
+    font-size: 24px;
+  }
+
+  .league-realboard-fork .rank-list-item .problems .item {
+    flex-basis: 64px;
+    font-size: 14px;
+  }
+}

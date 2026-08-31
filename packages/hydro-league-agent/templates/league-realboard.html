@@ -1,0 +1,21 @@
+{% extends "layout/html5.html" %}
+{% block body %}
+{{ set(UiContext, 'payload', payload) }}
+<main class="league-realboard-fork">
+  <header class="header">
+    <span class="rank">#Rank</span>
+    <span class="content">
+      <span class="title">League Realboard</span>
+      <span class="copyright">@Hydro/Realboard fork</span>
+    </span>
+    <span class="solved">Solved</span>
+    <span class="penalty">Penalty</span>
+  </header>
+  <div id="league-realboard-root" aria-live="polite"></div>
+  <footer class="realboard-source">
+    <span id="league-realboard-status">Connecting</span>
+    <a href="{{ payload.sourceUrl }}" rel="license">AGPL source</a>
+  </footer>
+</main>
+<link rel="stylesheet" href="/hydro-league-realboard.css" />
+{% endblock %}

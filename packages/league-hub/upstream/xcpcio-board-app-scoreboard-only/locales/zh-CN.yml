@@ -1,0 +1,132 @@
+button:
+  about: 关于
+  back: 返回
+  go: 确定
+  home: 首页
+  confirm: 确认
+  cancel: 取消
+  toggle_dark: 切换深色模式
+  toggle_langs: 切换语言
+intro:
+  desc: 固执己见的 Vite 项目模板
+  dynamic-route: 动态路由演示
+  hi: 你好，{name}
+  aka: 也叫
+  whats-your-name: 输入你的名字
+not-found: 未找到页面
+
+common:
+  loading: 加载中
+  colon: ：
+
+index:
+  start: 开始时间
+  duration: 持续时长
+
+type_menu:
+  rank: 排名
+  overview: 简介
+  submissions: 提交
+  statistics: 统计
+  streams: 直播
+  balloon: 气球
+  resolver: 滚榜
+  filter: 筛选
+  options: 选项
+  utility: 工具
+  countdown: 倒计时
+  teams: 队伍
+  info: 信息
+
+info_modal:
+  color_legend: 颜色图例
+
+streams:
+  webcam: 摄像头
+  screen: 屏幕
+  unavailable: 直播不可用
+  realtime_reaction: 实时反应
+  layout:
+    side_by_side: 并排
+    pip: 画中画
+  pip:
+    main: 主画面
+    position: 位置
+    top_left: 左上角
+    top_right: 右上角
+    bottom_left: 左下角
+    bottom_right: 右下角
+
+utility:
+  tools: 工具集
+  export: 导出
+
+standings:
+  start_time: 开始时间
+  end_time: 结束时间
+  elapsed: 当前时间
+  remaining: 剩余时间
+
+  place: Place
+  organization: Organization
+  team: Team
+  group: Group
+  solved: Solved
+  penalty: Penalty
+  dirt: Dirt
+  se: SE
+
+  statistics:
+    submitted: Submitted
+    attempted: Attempted
+    accepted: Accepted
+    dirt: Dirt
+    se: SE
+    first_solved: First Solved
+    last_solved: Last Solved
+    head_data:
+      problems: 题目数
+      organizations: 组织数
+      teams: 队伍数
+      submissions: 提交数
+    submit_heatmap: 提交热力图
+
+  options:
+    calculation_of_penalty: 罚时计算方式
+    in_minutes: 精确到分钟进行累加
+    in_seconds: 精确到秒进行累加
+    accumulate_in_seconds_and_finally_to_the_minute: 精确到秒进行累加，最后精确到分钟
+
+submissions:
+  total_submissions: 总提交数
+
+team_info:
+  rank: 排名
+  team_id: 队伍 ID
+  team_name: 队名
+  description: 简介
+  org_id: 组织 ID
+  org_name: 组织名
+  organization: 组织
+  group: 组别
+  members: 队员
+  coaches: 教练
+  location: 位置
+  award: 奖项
+
+medal:
+  gold: 金奖
+  silver: 银奖
+  bronze: 铜奖
+  honorable: 优胜奖
+
+org_info:
+  rank: 排名
+  name: 组织
+  icpc_id: ICPC ID
+  teams_count: 队伍数
+
+pending_page:
+  no_teams: 暂无注册队伍
+  teams_tab: 队伍列表
+  seat_map_tab: 座位图

@@ -1,0 +1,12 @@
+Hydro XCPCIO Scoreboard Wrapper
+
+Package: @hydrooj/scoreboard-xcpcio@0.1.0
+Repository: https://github.com/hydro-dev/Hydro.git
+Published gitHead: 2b7b974d86e1edf093befee1e83321f33b007d08
+License: AGPL-3.0-or-later
+
+This directory contains the unmodified files published in the npm tarball,
+plus this NOTICE and a copy of the GNU Affero General Public License version 3.
+The league agent uses a separate league-xcpcio route, replaces direct local
+contest data access with a permission-checked hub proxy, and never registers
+or overrides the upstream xcpcio route.

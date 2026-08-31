@@ -1,0 +1,79 @@
+html {
+  --global-background: #fff;
+
+  --theme-status-pending: #6cf;
+  --theme-status-configuration-error: #e28989;
+  --theme-status-system-error: grey;
+  --theme-status-compilation-error: #1679dc;
+  --theme-status-canceled: #676fc1;
+  --theme-status-file-error: darkorchid;
+  --theme-status-runtime-error: darkorchid;
+  --theme-status-time-limit-exceeded: sandybrown;
+  --theme-status-memory-limit-exceeded: sandybrown;
+  --theme-status-output-limit-exceeded: sandybrown;
+  --theme-status-partially-correct: #01bab2;
+  --theme-status-wrong-answer: #ff4545;
+  --theme-status-accepted: #37da58;
+  --theme-status-judgement-failed: #ff5722;
+  --theme-status-waiting: grey;
+  --theme-status-preparing: #de4d9e;
+  --theme-status-compiling: #00b5ad;
+  --theme-status-running: #6cf;
+  --theme-status-skipped: #78909c;
+  --theme-status-unknown: #000;
+  --theme-status-undefined: var(--theme-status-unknown);
+
+  --theme-standings-first-solve: #3db03d;
+  --theme-standings-correct: #e1ffb5;
+  --theme-standings-incorrect: #ffd0d0;
+  --theme-standings-pending: #c8d6fa;
+
+  --theme-resolver-ac: #5eb95e;
+  --theme-resolver-wa: #dd514c;
+  --theme-resolver-pending: #607d8b;
+  --theme-resolver-untouched: #1f1f1f;
+  --theme-resolver-selected: #406b82;
+  --theme-resolver-bg-0: #3e3e3e;
+  --theme-resolver-bg-1: #030712;
+
+  --theme-standings-00: #e0e0ff;
+  --theme-standings-01: #e8e8ff;
+  --theme-standings-10: #f8f8f8;
+  --theme-standings-11: #f2f2f2;
+}
+
+html.dark {
+  --global-background: #1f2937;
+
+  --theme-status-pending: #6cf;
+  --theme-status-configuration-error: #e28989;
+  --theme-status-system-error: #a5a5a5;
+  --theme-status-compilation-error: #3387da;
+  --theme-status-canceled: #6770d0;
+  --theme-status-file-error: #bc35ff;
+  --theme-status-runtime-error: #bc35ff;
+  --theme-status-time-limit-exceeded: #ff9840;
+  --theme-status-memory-limit-exceeded: #ff9840;
+  --theme-status-output-limit-exceeded: #ff9840;
+  --theme-status-partially-correct: #01bab2;
+  --theme-status-wrong-answer: #ff4545;
+  --theme-status-accepted: #37da58;
+  --theme-status-judgement-failed: #ff5722;
+  --theme-status-waiting: #a5a5a5;
+  --theme-status-preparing: #de4d9e;
+  --theme-status-compiling: #00b5ad;
+  --theme-status-running: #6cf;
+  --theme-status-skipped: #78909c;
+  --theme-status-unknown: #fff;
+  --theme-status-undefined: var(--theme-status-unknown);
+
+  --theme-standings-first-solve: #2aad2a;
+  --theme-standings-correct: #2d6b1d;
+  --theme-standings-incorrect: #6b1d1d;
+  --theme-standings-pending: #2d3d5c;
+
+  --theme-standings-00: #2d2d45;
+  --theme-standings-01: #343550;
+  --theme-standings-10: #3a3a4a;
+  --theme-standings-11: #424252;
+}

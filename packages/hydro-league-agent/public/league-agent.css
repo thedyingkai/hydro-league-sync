@@ -1,0 +1,24 @@
+:root {
+  --league-muted: #5d6875;
+  --league-border: #d8dee6;
+  --league-band: #f4f6f8;
+  --league-header: #17202a;
+}
+
+* {
+  letter-spacing: 0;
+}
+
+.league-xcpcio-shell {
+  width: 100%;
+  min-height: calc(100vh - 52px);
+  background: #ffffff;
+}
+
+.league-xcpcio-frame {
+  display: block;
+  width: 100%;
+  min-height: calc(100vh - 52px);
+  border: 0;
+  background: #ffffff;
+}

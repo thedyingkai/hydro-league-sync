@@ -1,0 +1,38 @@
+{
+  "name": "@hydro-league-sync/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Versioned wire protocol, request authentication, ACM scoring, and XCPCIO conversion for Hydro League Sync.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.11"
+  }
+}

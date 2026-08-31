@@ -1,0 +1,132 @@
+button:
+  about: About
+  back: Back
+  go: GO
+  home: Home
+  confirm: Confirm
+  cancel: Cancel
+  toggle_dark: Toggle dark mode
+  toggle_langs: Change languages
+intro:
+  desc: Opinionated Vite Starter Template
+  dynamic-route: Demo of dynamic route
+  hi: Hi, {name}!
+  aka: Also known as
+  whats-your-name: What's your name?
+not-found: Not found
+
+common:
+  loading: Loading
+  colon: ":"
+
+index:
+  start: StartTime
+  duration: Duration
+
+type_menu:
+  rank: Rank
+  overview: Overview
+  submissions: Submissions
+  statistics: Statistics
+  streams: Streams
+  balloon: Balloon
+  resolver: Resolver
+  filter: Filter
+  options: Options
+  utility: Utility
+  countdown: Countdown
+  teams: Teams
+  info: Info
+
+info_modal:
+  color_legend: Color Legend
+
+streams:
+  webcam: Webcam
+  screen: Screen
+  unavailable: Stream unavailable
+  realtime_reaction: Realtime Reaction
+  layout:
+    side_by_side: Side by Side
+    pip: Picture in Picture
+  pip:
+    main: Main
+    position: Position
+    top_left: Top Left
+    top_right: Top Right
+    bottom_left: Bottom Left
+    bottom_right: Bottom Right
+
+utility:
+  tools: Tools
+  export: Export
+
+standings:
+  start_time: Start
+  end_time: End
+  elapsed: Elapsed
+  remaining: Remaining
+
+  place: Place
+  organization: Organization
+  team: Team
+  group: Group
+  solved: Solved
+  penalty: Penalty
+  dirt: Dirt
+  se: SE
+
+  statistics:
+    submitted: Submitted
+    attempted: Attempted
+    accepted: Accepted
+    dirt: Dirt
+    se: SE
+    first_solved: First Solved
+    last_solved: Last Solved
+    head_data:
+      problems: Problems
+      organizations: Organizations
+      teams: Teams
+      submissions: Submissions
+    submit_heatmap: Submit Heatmap
+
+  options:
+    calculation_of_penalty: Calculation Of Penalty
+    in_minutes: in minutes
+    in_seconds: in seconds
+    accumulate_in_seconds_and_finally_to_the_minute: Accumulate in seconds and finally to the minute
+
+submissions:
+  total_submissions: Total Submissions
+
+team_info:
+  rank: Rank
+  team_id: Team ID
+  team_name: Team Name
+  description: Description
+  org_id: Org ID
+  org_name: Org Name
+  organization: Organization
+  group: Group
+  members: Members
+  coaches: Coaches
+  location: Location
+  award: Award
+
+medal:
+  gold: Gold Medal
+  silver: Silver Medal
+  bronze: Bronze Medal
+  honorable: Honorable Mention
+
+org_info:
+  rank: Rank
+  name: Organization
+  icpc_id: ICPC ID
+  teams_count: Teams Count
+
+pending_page:
+  no_teams: No teams registered yet
+  teams_tab: Teams
+  seat_map_tab: Seat Map

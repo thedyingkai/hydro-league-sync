@@ -1,0 +1,26 @@
+services:
+  league-hub:
+    build:
+      context: .
+      dockerfile: Dockerfile.hub
+    image: hydro-league-hub:local
+    init: true
+    restart: unless-stopped
+    environment:
+      HYDRO_LEAGUE_ADMIN_TOKEN: ${HYDRO_LEAGUE_ADMIN_TOKEN:?set HYDRO_LEAGUE_ADMIN_TOKEN}
+      HYDRO_LEAGUE_DELAYED_AFTER_MS: ${HYDRO_LEAGUE_DELAYED_AFTER_MS:-45000}
+      HYDRO_LEAGUE_OFFLINE_AFTER_MS: ${HYDRO_LEAGUE_OFFLINE_AFTER_MS:-180000}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - league-hub-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  league-hub-data:

@@ -1,0 +1,28 @@
+node_modules/
+dist/
+coverage/
+.tmp/
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
+# Local hub state and generated contest packages.
+data/
+outputs/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.cdp.zip
+
+# Generated deployment configuration contains site HMAC secrets.
+private-config/
+
+# Prepack regenerates the corresponding-source archive inside the package.
+packages/hydro-league-agent/public/hydro-league-agent-source.zip
+
+# Local authoring helper; the verified blank workbook is tracked in templates/.
+tools/spreadsheet-build/

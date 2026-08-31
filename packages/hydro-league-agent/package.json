@@ -1,0 +1,68 @@
+{
+  "name": "hydro-league-agent",
+  "version": "0.1.0",
+  "description": "Reliable Hydro 5.0.0-beta.9 site agent for multi-school league synchronization.",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thedyingkai/hydro-league-sync.git",
+    "directory": "packages/hydro-league-agent"
+  },
+  "homepage": "https://github.com/thedyingkai/hydro-league-sync/tree/main/packages/hydro-league-agent",
+  "bugs": {
+    "url": "https://github.com/thedyingkai/hydro-league-sync/issues"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "index.js",
+    "npm-shrinkwrap.json",
+    "dist",
+    "docs",
+    "src",
+    "frontend",
+    "templates",
+    "public",
+    "tools",
+    "upstream",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node tools/verify-xcpcio-assets.mjs && tsc -p tsconfig.json && npm run frontend:typecheck && npm run source:archive",
+    "typecheck": "tsc -p tsconfig.json --noEmit && npm run frontend:typecheck",
+    "frontend:typecheck": "tsc -p frontend/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "xcpcio:smoke": "node tools/smoke-xcpcio.mjs",
+    "source:archive": "node tools/build-source-archive.mjs",
+    "bundle:prepare": "npm ci --workspaces=false --omit=dev --omit=peer --ignore-scripts --no-audit --no-fund",
+    "prepack": "npm run build && npm run bundle:prepare"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "peerDependencies": {
+    "hydrooj": "5.0.0-beta.9"
+  },
+  "peerDependenciesMeta": {
+    "hydrooj": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@react-spring/web": "10.0.1",
+    "schemastery": "3.17.1"
+  },
+  "bundledDependencies": [
+    "@react-spring/web",
+    "schemastery"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.11"
+  }
+}

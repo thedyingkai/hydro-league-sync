@@ -1,0 +1,42 @@
+{
+  "name": "hydro-league-sync",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reliable multi-site Hydro contest synchronization and unified ACM/ICPC scoreboard.",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thedyingkai/hydro-league-sync.git"
+  },
+  "homepage": "https://github.com/thedyingkai/hydro-league-sync#readme",
+  "bugs": {
+    "url": "https://github.com/thedyingkai/hydro-league-sync/issues"
+  },
+  "type": "module",
+  "packageManager": "npm@10.9.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run build && npm run test:workspaces && npm run test:config-import && npm run test:integration",
+    "test:workspaces": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "test:config-import": "node --test tools/config-import/*.test.mjs",
+    "test:integration": "node --experimental-sqlite --test test/integration/*.test.mjs",
+    "smoke:remote-hub": "node tools/remote-hub-smoke.mjs",
+    "check:remote-hub-persistence": "node tools/remote-hub-persistence-check.mjs",
+    "import:config": "node tools/config-import/import-workbook.mjs",
+    "dev:hub": "npm run dev --workspace @hydro-league-sync/league-hub",
+    "start:hub": "npm run start --workspace @hydro-league-sync/league-hub"
+  },
+  "devDependencies": {
+    "fflate": "^0.8.2",
+    "read-excel-file": "9.3.10",
+    "schemastery": "^3.17.1"
+  }
+}
