@@ -78,6 +78,12 @@ export function buildCorrespondingSourceZip(): Uint8Array {
   addTree(files, join(hubRoot, 'tools'), join('hydro-league-sync', 'packages', 'league-hub', 'tools'));
   addTree(files, join(hubRoot, 'public'), join('hydro-league-sync', 'packages', 'league-hub', 'public'));
   addTree(files, join(hubRoot, 'upstream'), join('hydro-league-sync', 'packages', 'league-hub', 'upstream'));
+  for (const name of ['icpc-live', 'config-import']) {
+    addTree(files, join(repoRoot, 'tools', name), join('hydro-league-sync', 'tools', name));
+  }
+  addFile(files, join(repoRoot, 'docs', '04-ICPC-Live直播.md'),
+    join('hydro-league-sync', 'docs', '04-ICPC-Live直播.md'));
+  addTree(files, join(repoRoot, 'test', 'integration'), join('hydro-league-sync', 'test', 'integration'));
 
   if (existsSync(protocolRoot)) {
     for (const name of ['package.json', 'tsconfig.json', 'tsconfig.test.json', 'vitest.config.ts', 'README.md']) {

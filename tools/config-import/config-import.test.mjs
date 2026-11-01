@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   AWARD_HEADERS,
   CONFIG_HEADERS,
@@ -16,6 +21,22 @@ import {
 function sheet(headers, rows) {
   return [[], [], headers, ...rows];
 }
+
+test('malformed existing secrets never appear in importer diagnostics or get overwritten', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'hydro-import-secret-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const privateValue = 'private-broadcast-token-must-never-be-printed';
+  const malformed = `{ "broadcast_token": ${privateValue} }`;
+  const secretsPath = join(directory, 'site-secrets.json');
+  await writeFile(secretsPath, malformed);
+  const toolDirectory = dirname(fileURLToPath(import.meta.url));
+  const result = spawnSync(process.execPath, [join(toolDirectory, 'import-workbook.mjs'),
+    resolve(toolDirectory, '../../templates/league-participant-template.xlsx'), '--out', directory], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /无法读取已有密钥文件/);
+  assert.equal((result.stdout + result.stderr).includes(privateValue), false);
+  assert.equal(await readFile(secretsPath, 'utf8'), malformed);
+});
 
 function validSheets() {
   const hashA = 'a'.repeat(64);
@@ -65,6 +86,28 @@ test('converts a complete workbook into hub and per-site configs', () => {
   assert.equal('awards' in result.hubConfig, false);
   assert.equal('groups' in result.hubConfig.teams[0], false);
   assert.equal('badge_url' in result.hubConfig.teams[0], false);
+});
+
+test('generates and preserves a separate broadcast token without distributing it to schools', () => {
+  const first = convertWorkbookRows(validSheets());
+  const token = first.secrets.broadcast_token;
+  assert.ok(Buffer.byteLength(token, 'utf8') >= 32);
+  assert.notEqual(token, first.secrets.admin_token);
+  assert.equal(first.environment.HYDRO_LEAGUE_BROADCAST_TOKEN, token);
+  assert.equal(JSON.stringify(first.siteConfigs).includes(token), false);
+  assert.equal(JSON.stringify(first.hubConfig).includes(token), false);
+  const again = convertWorkbookRows(validSheets(), { secrets: first.secrets });
+  assert.equal(again.secrets.broadcast_token, token);
+  const legacy = { admin_token: first.secrets.admin_token, sites: first.secrets.sites };
+  const upgraded = convertWorkbookRows(validSheets(), { secrets: legacy });
+  assert.equal(upgraded.secrets.admin_token, legacy.admin_token);
+  assert.deepEqual(upgraded.secrets.sites, legacy.sites);
+  assert.ok(upgraded.secrets.broadcast_token);
+  for (const invalid of ['short', first.secrets.admin_token, first.secrets.sites['site-a']]) {
+    assert.throws(() => convertWorkbookRows(validSheets(), {
+      secrets: { ...first.secrets, broadcast_token: invalid },
+    }), WorkbookValidationError);
+  }
 });
 
 test('imports optional school badges, team medal groups, medal counts, and manual awards', () => {

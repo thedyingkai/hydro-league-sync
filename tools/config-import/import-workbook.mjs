@@ -70,7 +70,9 @@ async function readExistingSecrets(outputDirectory) {
     return JSON.parse(await readFile(filename, 'utf8'));
   } catch (error) {
     if (error?.code === 'ENOENT') return {};
-    throw new Error(`无法读取已有密钥文件 ${filename}：${error.message}`);
+    // A JSON parse error may quote the malformed secret value. Report the path
+    // without echoing any contents from this private file.
+    throw new Error(`无法读取已有密钥文件 ${filename}：请检查文件格式和访问权限`);
   }
 }
 

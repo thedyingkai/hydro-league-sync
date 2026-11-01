@@ -511,6 +511,13 @@ export function convertWorkbookRows(sheets, options = {}) {
   if (Buffer.byteLength(adminToken, 'utf8') < 32) {
     throw new WorkbookValidationError(['已有中心管理员令牌少于32字节']);
   }
+  const broadcastToken = text(secrets.broadcast_token) || generateSecret();
+  if (Buffer.byteLength(broadcastToken, 'utf8') < 32) {
+    throw new WorkbookValidationError(['已有直播只读令牌少于32字节']);
+  }
+  if (broadcastToken === adminToken || Object.values(siteSecrets).includes(broadcastToken)) {
+    throw new WorkbookValidationError(['直播只读令牌不得复用管理员令牌或学校密钥']);
+  }
 
   const endsAt = addMinutes(startsAt, durationMinutes);
   const freezeAt = addMinutes(endsAt, -freezeMinutes);
@@ -614,11 +621,12 @@ export function convertWorkbookRows(sheets, options = {}) {
   return {
     hubConfig,
     siteConfigs,
-    secrets: { admin_token: adminToken, sites: siteSecrets },
+    secrets: { admin_token: adminToken, broadcast_token: broadcastToken, sites: siteSecrets },
     environment: {
       HYDRO_LEAGUE_HOST: '127.0.0.1',
       HYDRO_LEAGUE_PORT: '3000',
       HYDRO_LEAGUE_ADMIN_TOKEN: adminToken,
+      HYDRO_LEAGUE_BROADCAST_TOKEN: broadcastToken,
       HYDRO_LEAGUE_DELAYED_AFTER_MS: String(delayedAfterMs),
       HYDRO_LEAGUE_OFFLINE_AFTER_MS: String(offlineAfterMs),
     },

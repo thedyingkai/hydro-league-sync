@@ -358,6 +358,22 @@ export class HubDatabase {
         data_json TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS broadcast_notification_state (
+        type TEXT NOT NULL,
+        resource_key TEXT NOT NULL,
+        resource_id TEXT,
+        data_json TEXT NOT NULL,
+        PRIMARY KEY (type, resource_key)
+      );
+
+      CREATE TABLE IF NOT EXISTS broadcast_notifications (
+        token INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        resource_id TEXT,
+        data_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
     `);
     const receiptColumns = this.db.prepare('PRAGMA table_info(source_receipts)').all() as DbRow[];
     if (!receiptColumns.some((column) => column.name === 'event_json')) {
@@ -1081,9 +1097,14 @@ export class HubDatabase {
     this.withTransaction(() => this.synchronizeContestNotificationsInTransaction(notifications, now));
   }
 
+  synchronizeBroadcastNotifications(notifications: readonly ContestNotificationInput[], now: string): void {
+    this.withTransaction(() => this.synchronizeContestNotificationsInTransaction(notifications, now, 'broadcast'));
+  }
+
   private synchronizeContestNotificationsInTransaction(
     notifications: readonly ContestNotificationInput[],
     now: string,
+    scope: 'contest' | 'broadcast' = 'contest',
   ): void {
     const current = new Map<string, ContestNotificationInput>();
     for (const notification of notifications) {
@@ -1094,15 +1115,15 @@ export class HubDatabase {
 
     const previous = this.db.prepare(`
       SELECT type, resource_key, resource_id, data_json
-      FROM contest_notification_state
+      FROM ${scope}_notification_state
       ORDER BY type, resource_key
     `).all() as DbRow[];
     const append = this.db.prepare(`
-      INSERT INTO contest_notifications (type, resource_id, data_json, created_at)
+      INSERT INTO ${scope}_notifications (type, resource_id, data_json, created_at)
       VALUES (?, ?, ?, ?)
     `);
     const remove = this.db.prepare(`
-      DELETE FROM contest_notification_state WHERE type = ? AND resource_key = ?
+      DELETE FROM ${scope}_notification_state WHERE type = ? AND resource_key = ?
     `);
     for (const row of previous) {
       const key = `${String(row.type)}\0${String(row.resource_key)}`;
@@ -1117,14 +1138,14 @@ export class HubDatabase {
     }
 
     const upsert = this.db.prepare(`
-      INSERT INTO contest_notification_state (type, resource_key, resource_id, data_json)
+      INSERT INTO ${scope}_notification_state (type, resource_key, resource_id, data_json)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(type, resource_key) DO UPDATE SET
         resource_id = excluded.resource_id,
         data_json = excluded.data_json
     `);
     const getState = this.db.prepare(`
-      SELECT data_json FROM contest_notification_state
+      SELECT data_json FROM ${scope}_notification_state
       WHERE type = ? AND resource_key = ?
     `);
     for (const notification of notifications) {
@@ -1138,9 +1159,21 @@ export class HubDatabase {
   }
 
   getContestNotifications(afterToken = 0): ContestNotification[] {
+    return this.getNotifications(afterToken, 'contest');
+  }
+
+  getBroadcastNotifications(afterToken = 0): ContestNotification[] {
+    return this.getNotifications(afterToken, 'broadcast');
+  }
+
+  hasBroadcastNotification(token: number): boolean {
+    return this.db.prepare('SELECT 1 FROM broadcast_notifications WHERE token = ?').get(token) !== undefined;
+  }
+
+  private getNotifications(afterToken: number, scope: 'contest' | 'broadcast'): ContestNotification[] {
     return (this.db.prepare(`
       SELECT token, type, resource_id, data_json
-      FROM contest_notifications
+      FROM ${scope}_notifications
       WHERE token > ?
       ORDER BY token
     `).all(afterToken) as DbRow[]).map((row) => ({

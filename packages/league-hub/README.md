@@ -19,6 +19,7 @@ npm run dev --workspace @hydro-league-sync/league-hub
 | `HYDRO_LEAGUE_PORT` | `3000` | 监听端口 |
 | `HYDRO_LEAGUE_DATABASE` | `./data/league-hub.sqlite` | SQLite 文件 |
 | `HYDRO_LEAGUE_ADMIN_TOKEN` | 未设置 | 至少 32 个 UTF-8 字节的中心管理员凭据；管理 API 用 Bearer，中央 ICPC Tools 可用 Basic 用户名 `jury`；未设置时管理 API 禁用 |
+| `HYDRO_LEAGUE_BROADCAST_TOKEN` | 未设置 | 独立直播只读令牌，至少 32 字节；Basic 用户名 `broadcast`；未设置/为空时 `/api/live` 禁用 |
 | `HYDRO_LEAGUE_DELAYED_AFTER_MS` | `45000` | 站点进入 `DELAYED` 的时限 |
 | `HYDRO_LEAGUE_OFFLINE_AFTER_MS` | `180000` | 站点进入 `OFFLINE` 的时限 |
 | `HYDRO_LEAGUE_AUTH_CLOCK_SKEW_MS` | `300000` | HMAC 时间戳容差 |
@@ -26,6 +27,7 @@ npm run dev --workspace @hydro-league-sync/league-hub
 ## 权限边界
 
 - 公开榜、学校状态和公开 submissions 增量可匿名读取。
+- `/api/live` 是 ICPC Live 专用公开赛事数据视图，只接受独立直播令牌（Basic `broadcast` 或 Bearer），不接受管理员/学校凭证。直播凭证不能访问原裁判和管理 API。完整配置见[直播接入说明](../../docs/04-ICPC-Live直播.md)。
 - `view=jury`、ICPC Contest API、event-feed 和 CDP 导出必须使用站点 HMAC、中心管理员 Bearer，或中央 ICPC Tools 的 Basic（用户名 `jury`，密码为管理员令牌）。Basic 只允许经 HTTPS 使用。
 - 管理配置与 quarantine/mapping audit 只接受中心管理员 Bearer。
 - 学校浏览器不应直接连接中心服务；学校 Hydro 插件在确认本地比赛管理员权限后，以站点服务凭证代理 jury 请求。

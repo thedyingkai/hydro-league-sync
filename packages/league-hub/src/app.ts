@@ -23,6 +23,7 @@ import {
 } from './database.js';
 import { buildCdpZip, buildContestApiResources, buildEventFeed, contestApiResourceId } from './icpc.js';
 import { buildScoreboard } from './scoreboard.js';
+import { registerBroadcastApi } from './live.js';
 import { buildCorrespondingSourceZip } from './source.js';
 import type { EventBatch, HubConfiguration, IngestEvent } from './types.js';
 import { buildXcpcio } from './xcpcio.js';
@@ -490,7 +491,7 @@ async function contestApiError(reply: FastifyReply, code: number, message: strin
 function isContestApiPath(url: string): boolean {
   const path = url.split('?', 1)[0] ?? url;
   return path === '/api' || path === '/api/' || path === '/api/contests'
-    || path.startsWith('/api/contests/');
+    || path.startsWith('/api/contests/') || path === '/api/live' || path.startsWith('/api/live/');
 }
 
 function packageRoot(): string {
@@ -533,9 +534,28 @@ function buildXcpcioResponse(
   });
 }
 
+function assertBroadcastTokenIsolation(
+  database: HubDatabase,
+  token: string | undefined,
+  sites: readonly { site_id: string; secret?: string | null }[] = database.getSites(),
+): void {
+  if (!token) return;
+  for (const site of sites) {
+    // Configuration PUT preserves a site's current secret when it is omitted.
+    const secret = site.secret ?? database.getSite(site.site_id)?.secret;
+    if (secret === token) throw new Error('broadcastToken must differ from every site HMAC secret');
+  }
+}
+
 export function createHubApplication(input: HubOptions = {}): HubApplication {
   const options = resolveHubOptions(input);
   const database = new HubDatabase(options.databasePath);
+  try {
+    assertBroadcastTokenIsolation(database, options.broadcastToken);
+  } catch (error) {
+    database.close();
+    throw error;
+  }
   const app = Fastify({ logger: false, bodyLimit: 8 * 1024 * 1024 });
   app.register(fastifyStatic, {
     root: join(packageRoot(), 'public', 'hydro-league-xcpcio'),
@@ -566,6 +586,7 @@ export function createHubApplication(input: HubOptions = {}): HubApplication {
     }
   });
   const auth = createAuthenticator(database, options);
+  registerBroadcastApi(app, database, options);
 
   app.addHook('onClose', async () => database.close());
   app.setErrorHandler(async (error, request, reply) => {
@@ -636,6 +657,7 @@ export function createHubApplication(input: HubOptions = {}): HubApplication {
       return reply.code(409).send({ error: 'contest_finalized' });
     }
     const config = validateConfiguration(normalizeConfigurationBody(request.body));
+    assertBroadcastTokenIsolation(database, options.broadcastToken, config.sites);
     database.importConfiguration(config, options.now().toISOString());
     return reply.send({ ok: true, cursor: database.latestCursor() });
   });

@@ -186,5 +186,22 @@ export function createAuthenticator(database: HubDatabase, options: ResolvedHubO
     return authenticateSite(request, reply, contestApi);
   }
 
-  return { authenticateSite, authenticateAdmin, authenticateJury };
+  async function authenticateBroadcast(request: FastifyRequest, reply: FastifyReply): Promise<boolean> {
+    if (!options.broadcastToken) {
+      await authFailure(reply, 503, 'broadcast_api_disabled', 'The broadcast API is disabled', true);
+      return false;
+    }
+    const bearer = bearerToken(request);
+    const basic = basicCredentials(request);
+    const accepted = (bearer !== undefined && safeEqual(bearer, options.broadcastToken))
+      || (basic !== undefined && safeEqual(basic.username, 'broadcast')
+        && safeEqual(basic.password, options.broadcastToken));
+    if (!accepted) {
+      reply.header('www-authenticate', 'Basic realm="Hydro League Hub Broadcast", charset="UTF-8"');
+      await authFailure(reply, 401, 'invalid_broadcast_credentials', 'The broadcast credentials are invalid', true);
+    }
+    return accepted;
+  }
+
+  return { authenticateSite, authenticateAdmin, authenticateJury, authenticateBroadcast };
 }
