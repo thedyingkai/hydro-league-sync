@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+- Added an isolated, read-only CLICS 2023-06 broadcast API for ICPC Live with
+  server-side public freeze filtering and persistent streaming notifications.
+- Added a separate broadcast token, preserved by the Excel importer, and Docker
+  environment wiring without sharing administrator credentials with the overlay.
+- Added ICPC Live configuration generation, connection checks, data-only OBS
+  setup, and regression coverage for frozen/rejudged/reconnected live feeds.
+- Added a local three-school demo with independent authenticated simulators,
+  durable queues, outage recovery, rejudging, and an ICPC Live dashboard.
+- Documented central Hub deployment, per-school Hydro Agent configuration,
+  broadcast setup, upgrades, and multi-school acceptance checks.
+
 ## 0.1.2 - 2026-09-01
 
 - Allowed the self-hosted Agent wrapper to consume a deliberately configured,

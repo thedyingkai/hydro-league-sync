@@ -20,6 +20,8 @@ outputs/
 
 # Generated deployment configuration contains site HMAC secrets.
 private-config/
+# ICPC Live credentials are private even when a custom output directory is used.
+creds.json
 
 # Prepack regenerates the corresponding-source archive inside the package.
 packages/hydro-league-agent/public/hydro-league-agent-source.zip

@@ -5,6 +5,7 @@
 .tmp
 data
 private-config
+**/creds.json
 outputs
 .env
 .env.*

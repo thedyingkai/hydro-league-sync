@@ -6,6 +6,7 @@ export interface HubOptions {
   port?: number;
   databasePath?: string;
   adminToken?: string;
+  broadcastToken?: string;
   delayedAfterMs?: number;
   offlineAfterMs?: number;
   authClockSkewMs?: number;
@@ -17,6 +18,7 @@ export interface ResolvedHubOptions {
   port: number;
   databasePath: string;
   adminToken: string | undefined;
+  broadcastToken: string | undefined;
   delayedAfterMs: number;
   offlineAfterMs: number;
   authClockSkewMs: number;
@@ -47,12 +49,20 @@ export function resolveHubOptions(options: HubOptions = {}): ResolvedHubOptions 
   if (adminToken !== undefined && Buffer.byteLength(adminToken, 'utf8') < 32) {
     throw new Error('adminToken must contain at least 32 UTF-8 bytes');
   }
+  const broadcastToken = (options.broadcastToken ?? process.env.HYDRO_LEAGUE_BROADCAST_TOKEN) || undefined;
+  if (broadcastToken !== undefined && Buffer.byteLength(broadcastToken, 'utf8') < 32) {
+    throw new Error('broadcastToken must contain at least 32 UTF-8 bytes');
+  }
+  if (broadcastToken !== undefined && broadcastToken === adminToken) {
+    throw new Error('broadcastToken must differ from adminToken');
+  }
 
   return {
     host: options.host ?? process.env.HYDRO_LEAGUE_HOST ?? '127.0.0.1',
     port: options.port ?? positiveInteger(process.env.HYDRO_LEAGUE_PORT, 3000),
     databasePath,
     adminToken,
+    broadcastToken,
     delayedAfterMs,
     offlineAfterMs,
     authClockSkewMs: options.authClockSkewMs

@@ -44,6 +44,10 @@ COPY --chown=node:node package.json package-lock.json tsconfig.base.json .npmrc 
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/packages/protocol ./packages/protocol
 COPY --from=build --chown=node:node /app/packages/league-hub ./packages/league-hub
+COPY --chown=node:node tools/icpc-live ./tools/icpc-live
+COPY --chown=node:node tools/config-import ./tools/config-import
+COPY --chown=node:node docs/04-ICPC-Live直播.md ./docs/04-ICPC-Live直播.md
+COPY --chown=node:node test/integration ./test/integration
 RUN mkdir -p /data && chown node:node /data
 
 USER node

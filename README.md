@@ -4,6 +4,7 @@ Hydro League Sync 把多所学校各自部署的 Hydro 比赛可靠汇总为一�
 
 ## 功能
 
+- ICPC Live 数据直播：独立只读 `/api/live`，由 Hub 执行公开封榜和解封，提供实时榜单与提交动态；附配置生成、三校本地联调演示和 OBS 浏览器源接入工具。见[直播接入与部署说明](docs/04-ICPC-Live直播.md)。
 - 学校端持久 outbox、断线重传、心跳和全量 reconciliation，网络中断不丢提交。
 - 中心按提交重新计分，不拼接各校名次；CE 不计罚次，打星队展示但不占正式名次。
 - public 封榜与 jury 实时视图严格隔离；学校断联时继续展示已有数据并标注榜单可能不完整。
@@ -71,7 +72,7 @@ Invoke-RestMethod http://127.0.0.1:3000/healthz
 
 Hub 启动后，使用管理员 Bearer 把完整 `hub-config.json` 全量 `PUT` 到 `/api/v1/admin/config`。配置成功后 `/readyz` 必须返回 200。公网部署应让 Hub 继续只监听回环地址，由 HTTPS 反向代理对外服务；管理配置、封存和发布接口只通过 SSH 隧道或受控管理网络访问。
 
-正式中心可直接加载 Release 中的离线 Docker 镜像归档，不需要在服务器重新构建：
+仅运行原有联赛汇总时，正式中心可直接加载 Release 中的离线 Docker 镜像归档，不需要在服务器重新构建。**已有 `0.1.2` Release 镜像不包含本次新增的 ICPC Live 接口**；启用直播请按[直播部署说明](docs/04-ICPC-Live直播.md)构建包含该功能的源码，并使用独立镜像标签。原有 Release 的启动方式如下：
 
 ```bash
 gzip -dc hydro-league-hub-0.1.2-linux-amd64.docker.tar.gz | docker load
@@ -138,6 +139,7 @@ curl -f http://127.0.0.1:8888/hydro-league-agent-source.zip
 
 ## 文档
 
+- [ICPC Live 直播：中心服务器、各校插件、直播机和三校联调](docs/04-ICPC-Live直播.md)
 - [完整部署与赛时运行手册](docs/02-部署与赛时运行手册.md)
 - [学校负责人部署指南](docs/03-学校负责人部署.md)
 - [设计与规则说明](docs/01-方案确认.md)
@@ -153,6 +155,14 @@ npm test
 ```
 
 Hub 公开页是 `http://127.0.0.1:3000/`，健康检查为 `/healthz`，配置后的就绪检查为 `/readyz`。
+
+已安装 Java 17 并下载 ICPC Live JAR 后，在构建好的仓库根目录运行三校联调演示：
+
+```powershell
+npm run live:multischool -- --jar 'C:\icpc-live\live.jar'
+```
+
+该命令启动三个独立学校模拟进程、临时 Hub 和 ICPC Live，自动打开三校状态与直播榜单页面。演示包含断网积压、恢复补传和重判，按 Ctrl+C 停止；模拟器通过真实 HTTP/HMAC 上报，不启动真实 Hydro 判题服务。详见[操作和验收流程](docs/04-ICPC-Live直播.md)。
 
 ## 许可证与对应源码
 
