@@ -35,7 +35,7 @@ async function update(){try{
  }
  document.getElementById('phase').textContent=state.phaseLabel;
  document.getElementById('elapsed').textContent='运行 '+state.elapsedSeconds+' 秒 · 本轮 '+state.cycleSeconds+'/80 秒';
- document.getElementById('logs').textContent=state.logs.slice(-6).map(x=>x.time+'  '+x.message).join('\n');
+ document.getElementById('logs').textContent=state.logs.slice(-6).map(x=>x.time+'  '+x.message).join('\\n');
 }catch{document.getElementById('phase').textContent='本地演示已停止，重新运行启动命令即可';}}
 update();setInterval(update,1000);
 </script></html>`;
